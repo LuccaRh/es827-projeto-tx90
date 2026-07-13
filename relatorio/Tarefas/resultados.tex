@@ -180,9 +180,20 @@ João Victor Pomiglio de Oliveira & A confirmar pela equipe antes da entrega. \\
 
 \subsection{Código MATLAB utilizado}
 
-O código completo utilizado para gerar a trajetória, calcular a cinemática inversa, avaliar a dinâmica e simular os controladores é apresentado a seguir.
+O código completo utilizado para gerar a trajetória, calcular a cinemática inversa, avaliar a dinâmica e simular os controladores é apresentado a seguir. Ele foi organizado em múltiplos arquivos, com uma função pública por arquivo, conforme a convenção do MATLAB: o script principal define todos os parâmetros do projeto e orquestra as etapas, e cada etapa é implementada em uma função própria.
 
 \begingroup
 \singlespacing
-\lstinputlisting[caption={Código completo da simulação do Stäubli TX90.},label={lst:codigo_tx90}]{../simulacao/tx90_simulacao.m}
+\lstinputlisting[caption={Script principal da simulação (simulacaoTX90.m).},label={lst:simulacaoTX90}]{\dirSimulacao/simulacaoTX90.m}
+\lstinputlisting[caption={Carregamento do robô e da ferramenta (carregarRobo.m).},label={lst:carregarRobo}]{\dirSimulacao/carregarRobo.m}
+\lstinputlisting[caption={Geração da trajetória cartesiana com perfil LSPB (gerarTrajetoria.m).},label={lst:gerarTrajetoria}]{\dirSimulacao/gerarTrajetoria.m}
+\lstinputlisting[caption={Cinemática inversa com validação por cinemática direta (resolverCinematicaInversa.m).},label={lst:resolverCinematicaInversa}]{\dirSimulacao/resolverCinematicaInversa.m}
+\lstinputlisting[caption={Dinâmica inversa e análise dos torques (calcularTorques.m).},label={lst:calcularTorques}]{\dirSimulacao/calcularTorques.m}
+\lstinputlisting[caption={Controladores em malha fechada (simularControlador.m).},label={lst:simularControlador}]{\dirSimulacao/simularControlador.m}
+\lstinputlisting[caption={Métricas de rastreamento do controlador (analisarControle.m).},label={lst:analisarControle}]{\dirSimulacao/analisarControle.m}
+\lstinputlisting[caption={Verificação da área de trabalho (verificarAreaTrabalho.m).},label={lst:verificarAreaTrabalho}]{\dirSimulacao/verificarAreaTrabalho.m}
+\lstinputlisting[caption={Gráficos de resultados (plotarResultados.m).},label={lst:plotarResultados}]{\dirSimulacao/plotarResultados.m}
+\lstinputlisting[caption={Animação 3D da execução (animarRobo.m).},label={lst:animarRobo}]{\dirSimulacao/animarRobo.m}
+\lstinputlisting[caption={Helper de estilo: figura com tema escuro (criarFiguraEscura.m).},label={lst:criarFiguraEscura}]{\dirSimulacao/criarFiguraEscura.m}
+\lstinputlisting[caption={Helper de estilo: eixo com tema escuro (estilizarEixoEscuro.m).},label={lst:estilizarEixoEscuro}]{\dirSimulacao/estilizarEixoEscuro.m}
 \endgroup
