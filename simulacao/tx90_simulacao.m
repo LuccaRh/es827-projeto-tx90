@@ -163,14 +163,12 @@ erroPosIK = zeros(1, numPassos);
 erroOriIK = zeros(1, numPassos);
 sigmaMin = zeros(1, numPassos);
 
-estadoAvisos = warning('off', 'all');
 for passo = 1:numPassos
     poseAlvo = trvec2tform(posCart(:,passo)') * rotm2tform(R_FERRAMENTA);
     [qSolucao, ~] = solverIK('paint_tcp', poseAlvo, PESOS_IK, estimativaInicial);
     qTraj(:,passo) = qSolucao';
     estimativaInicial = qSolucao;
 end
-warning(estadoAvisos);
 
 % Reconstrução por cinemática direta: erros de posição/orientação e Jacobiano
 caminhoEfetuador = zeros(3, numPassos);
@@ -230,8 +228,8 @@ M0 = massMatrix(robo, qTraj(:,1)');
 Kp = (WN^2) * diag(M0);
 Kd = (2*ZETA*WN) * diag(M0);
 
-[qSimPD, ~, tauSimPD] = controlePDGravidade(robo, tempo, qTraj, qdTraj, Kp, Kd, LIMITE_TORQUE);
-[qSimTC, ~, ~] = controleTorqueComputado(robo, tempo, qTraj, qdTraj, qddTraj, WN, ZETA, LIMITE_TORQUE);
+[qSimPD, ~, tauSimPD] = simularControlador(robo, tempo, qTraj, qdTraj, qddTraj, Kp, Kd, WN, ZETA, LIMITE_TORQUE, 'pdGravidade');
+[qSimTC, ~, ~] = simularControlador(robo, tempo, qTraj, qdTraj, qddTraj, Kp, Kd, WN, ZETA, LIMITE_TORQUE, 'torqueComputado');
 
 analisarControle(qTraj, qSimPD, tauTraj, tauSimPD, numJuntas);
 
@@ -248,7 +246,8 @@ fprintf('RMS erro torque computado [rad]: %s\n', mat2str(erroRmsTC', 4));
 
 %% Animação: setup da figura
 figAnim = figure('Name', 'TX90 – Troca de Ferramentas', ...
-    'NumberTitle', 'off', 'Color', [0.07 0.07 0.10], 'Position', [40 40 1200 730]);
+    'NumberTitle', 'off', 'Color', [0.07 0.07 0.10], ...
+    'Units', 'normalized', 'Position', [0.05 0.08 0.62 0.80]);
 
 eixoAnim = axes('Parent', figAnim, 'Color', [0.07 0.07 0.10], 'XColor', [0.55 0.65 0.75], ...
     'YColor', [0.55 0.65 0.75], 'ZColor', [0.55 0.65 0.75], ...
@@ -277,14 +276,18 @@ xlabel(eixoAnim, 'X (m)', 'Color', 'w'); ylabel(eixoAnim, 'Y (m)', 'Color', 'w')
 tituloAnim = title(eixoAnim, 'TX90  |  Iniciando...', 'Color', [0.95 0.95 1.0], 'FontSize', 13, 'FontWeight', 'bold');
 
 %% Animação: loop principal
-show(robo, qTraj(:,1)', 'Parent', eixoAnim, 'Visuals', 'on', 'Frames', 'off', 'PreservePlot', false);
+% 'FastUpdate' atualiza apenas as transformações dos corpos já desenhados,
+% em vez de recriar toda a geometria a cada frame.
+show(robo, qTraj(:,1)', 'Parent', eixoAnim, 'Visuals', 'on', 'Frames', 'off', ...
+    'PreservePlot', false, 'FastUpdate', true);
 
 tInicio = tic;
 for passo = 1:numPassos
     if ~isvalid(figAnim), break; end
     if toc(tInicio) > tempo(passo) + DT*1.5, continue; end   % pula frames atrasados
 
-    show(robo, qTraj(:,passo)', 'Parent', eixoAnim, 'Visuals', 'on', 'Frames', 'off', 'PreservePlot', false);
+    show(robo, qTraj(:,passo)', 'Parent', eixoAnim, 'Visuals', 'on', 'Frames', 'off', ...
+        'PreservePlot', false, 'FastUpdate', true);
 
     set(marcadorTCP, 'XData', caminhoEfetuador(1,passo), 'YData', caminhoEfetuador(2,passo), ...
         'ZData', caminhoEfetuador(3,passo));
@@ -317,24 +320,27 @@ plotarControle(tempo, qTraj, qSimPD, tauTraj, tauSimPD, numJuntas);
 %  FUNÇÕES DE GERAÇÃO DE TRAJETÓRIA
 %  ------------------------------------------------------------------------
 function [pontos, cores, vel, acel] = interpolarCartesianaConstante(pontosApoio, velMax, acelMax, dt, codigoCor)
-    pontos = [];
-    vel = [];
-    acel = [];
-    for seg = 1:size(pontosApoio,2)-1
+    numSegmentos = size(pontosApoio, 2) - 1;
+    segPontos = cell(1, numSegmentos);
+    segVel    = cell(1, numSegmentos);
+    segAcel   = cell(1, numSegmentos);
+    for seg = 1:numSegmentos
         delta = pontosApoio(:,seg+1) - pontosApoio(:,seg);
         distancia = norm(delta);
         [s, v, a] = perfilLSPB(distancia, velMax, acelMax, dt);
-        segmento = pontosApoio(:,seg) + (delta/distancia)*s;
-        if isempty(pontos)
-            pontos = segmento;
-            vel = v;
-            acel = a;
-        else
-            pontos = [pontos, segmento(:,2:end)]; %#ok<AGROW>
-            vel = [vel, v(2:end)];                %#ok<AGROW>
-            acel = [acel, a(2:end)];              %#ok<AGROW>
+        pontosSeg = pontosApoio(:,seg) + (delta/distancia)*s;
+        if seg > 1   % remove o 1º ponto (repetido do fim do segmento anterior)
+            pontosSeg = pontosSeg(:,2:end);
+            v = v(2:end);
+            a = a(2:end);
         end
+        segPontos{seg} = pontosSeg;
+        segVel{seg}    = v;
+        segAcel{seg}   = a;
     end
+    pontos = [segPontos{:}];
+    vel    = [segVel{:}];
+    acel   = [segAcel{:}];
     cores = repmat(codigoCor, 1, size(pontos,2));
 end
 
@@ -360,6 +366,13 @@ end
 % Perfil LSPB (segmento linear com concordância parabólica) ajustado à grade
 % de amostragem: procura o menor número de passos que respeita velMax/acelMax.
 function [s, v, a] = perfilLSPB(distancia, velMax, acelMax, dt)
+    arguments
+        distancia (1,1) double {mustBePositive}
+        velMax (1,1) double {mustBePositive}
+        acelMax (1,1) double {mustBePositive}
+        dt (1,1) double {mustBePositive}
+    end
+
     if distancia <= velMax^2/acelMax
         tempoMinimo = 2*sqrt(distancia/acelMax);
     else
@@ -417,11 +430,9 @@ function tauTraj = calcularTorques(robo, qTraj, qdTraj, qddTraj)
     numPassos = size(qTraj, 2);
     tauTraj = zeros(numJuntas, numPassos);
 
-    estadoAvisos = warning('off', 'all');
     for passo = 1:numPassos
         tauTraj(:,passo) = inverseDynamics(robo, qTraj(:,passo)', qdTraj(:,passo)', qddTraj(:,passo)');
     end
-    warning(estadoAvisos);
 end
 
 % Análise textual dos torques calculados pela dinâmica inversa
@@ -438,47 +449,25 @@ function analisarTorques(tauTraj, tempo, numJuntas)
     fprintf('-----------------------------------------------\n\n');
 end
 
-% Controle PD + compensação de gravidade (feedforward)
-% Integração em passo fixo, com dois sub-passos em cada amostra.
-function [qSim, qdSim, tauSim] = controlePDGravidade(robo, tempo, qTraj, qdTraj, Kp, Kd, tauLimite)
-    numJuntas = size(qTraj, 1);
-    numPassos = numel(tempo);
-    dt = tempo(2) - tempo(1);
-
-    numSubPassos = 2;
-    hSub = dt / numSubPassos;
-
-    qSim   = nan(numJuntas, numPassos);
-    qdSim  = nan(numJuntas, numPassos);
-    tauSim = nan(numJuntas, numPassos);
-
-    qSim(:,1)  = qTraj(:,1);
-    qdSim(:,1) = qdTraj(:,1);
-
-    for passo = 1:numPassos-1
-        q = qSim(:,passo);
-        qd = qdSim(:,passo);
-        qRef  = qTraj(:,passo);
-        qdRef = qdTraj(:,passo);
-
-        for sub = 1:numSubPassos
-            torqueGravidade = gravityTorque(robo, q')';
-            tau = Kp.*(qRef - q) + Kd.*(qdRef - qd) + torqueGravidade;
-            tau = max(min(tau, tauLimite), -tauLimite);
-            qdd = forwardDynamics(robo, q', qd', tau')';
-            qd = qd + hSub*qdd;
-            q = q + hSub*qd;
-        end
-
-        qSim(:,passo+1)  = q;
-        qdSim(:,passo+1) = qd;
-        tauSim(:,passo) = tau;
+% Simula o robô em malha fechada com a lei de controle escolhida:
+%   'pdGravidade'     tau = Kp.*e + Kd.*ed + G(q)   (PD + feedforward de gravidade)
+%   'torqueComputado' tau = ID(q, qd, qddRef + 2*zeta*wn*ed + wn^2*e)
+% Integração em passo fixo (Euler semi-implícito), com dois sub-passos por amostra.
+function [qSim, qdSim, tauSim] = simularControlador(robo, tempo, qTraj, qdTraj, qddTraj, Kp, Kd, wn, zeta, tauLimite, modo)
+    arguments
+        robo (1,1) rigidBodyTree
+        tempo (1,:) double
+        qTraj double
+        qdTraj double
+        qddTraj double
+        Kp (:,1) double
+        Kd (:,1) double
+        wn (1,1) double {mustBePositive}
+        zeta (1,1) double {mustBePositive}
+        tauLimite (:,1) double
+        modo (1,:) char {mustBeMember(modo, {'pdGravidade','torqueComputado'})}
     end
-    tauSim(:,end) = tauSim(:,end-1);
-end
 
-% Controle por torque computado (dinâmica inversa em malha fechada)
-function [qSim, qdSim, tauSim] = controleTorqueComputado(robo, tempo, qTraj, qdTraj, qddTraj, wn, zeta, tauLimite)
     numJuntas = size(qTraj, 1);
     numPassos = numel(tempo);
     dt = tempo(2) - tempo(1);
@@ -494,34 +483,28 @@ function [qSim, qdSim, tauSim] = controleTorqueComputado(robo, tempo, qTraj, qdT
     for passo = 1:numPassos-1
         q = qSim(:,passo);
         qd = qdSim(:,passo);
+
         for sub = 1:numSubPassos
             erro = qTraj(:,passo) - q;
             erroVel = qdTraj(:,passo) - qd;
-            acelDesejada = qddTraj(:,passo) + 2*zeta*wn*erroVel + wn^2*erro;
-            tau = inverseDynamics(robo, q', qd', acelDesejada')';
+            if strcmp(modo, 'pdGravidade')
+                torqueGravidade = gravityTorque(robo, q')';
+                tau = Kp.*erro + Kd.*erroVel + torqueGravidade;
+            else
+                acelDesejada = qddTraj(:,passo) + 2*zeta*wn*erroVel + wn^2*erro;
+                tau = inverseDynamics(robo, q', qd', acelDesejada')';
+            end
             tau = max(min(tau, tauLimite), -tauLimite);
             qdd = forwardDynamics(robo, q', qd', tau')';
             qd = qd + hSub*qdd;
             q = q + hSub*qd;
         end
+
         qSim(:,passo+1)  = q;
         qdSim(:,passo+1) = qd;
         tauSim(:,passo) = tau;
     end
     tauSim(:,end) = tauSim(:,end-1);
-end
-
-% Um passo de integração RK4 da dinâmica direta (torque constante no passo)
-function [qProximo, qdProximo] = passoRK4Dinamica(robo, q, qd, tau, h)
-    f = @(qq, qqd) forwardDynamics(robo, qq', qqd', tau')';
-
-    k1q = qd;                 k1qd = f(q, qd);
-    k2q = qd + (h/2)*k1qd;    k2qd = f(q + (h/2)*k1q, qd + (h/2)*k1qd);
-    k3q = qd + (h/2)*k2qd;    k3qd = f(q + (h/2)*k2q, qd + (h/2)*k2qd);
-    k4q = qd + h*k3qd;        k4qd = f(q + h*k3q,     qd + h*k3qd);
-
-    qProximo  = q  + (h/6)*(k1q  + 2*k2q  + 2*k3q  + k4q);
-    qdProximo = qd + (h/6)*(k1qd + 2*k2qd + 2*k3qd + k4qd);
 end
 
 % Análise do desempenho do controlador (erro de rastreamento e torque)
@@ -571,13 +554,11 @@ function nuvem = amostrarAreaTrabalho(robo, numAmostras)
     end
 
     nuvem = zeros(3, numAmostras);
-    estadoAvisos = warning('off', 'all');
     for amostra = 1:numAmostras
         qAleatorio = limites(:,1) + rand(numJuntas,1) .* (limites(:,2) - limites(:,1));
         pose = getTransform(robo, qAleatorio', 'paint_tcp');
         nuvem(:,amostra) = pose(1:3,4);
     end
-    warning(estadoAvisos);
 end
 
 % Verifica se os pontos desejados da trajetória estão dentro da nuvem
@@ -620,14 +601,9 @@ end
 
 % Plota a nuvem de pontos da área de trabalho junto com a trajetória desejada
 function plotarAreaTrabalho(nuvem, pontosDesejados)
-    corFundo = [0.07 0.07 0.10];
-    corEixos = [0.65 0.75 0.85];
-    figWorkspace = figure('Name', 'TX90 – Área de Trabalho (Workspace)', 'NumberTitle', 'off', ...
-        'Color', corFundo, 'Position', [40 40 700 600]);
-    eixo = axes('Parent', figWorkspace);
-    set(eixo, 'Color', corFundo, 'XColor', corEixos, 'YColor', corEixos, 'ZColor', corEixos, ...
-        'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
-    hold(eixo, 'on'); grid(eixo, 'on'); view(eixo, 140, 22); axis(eixo, 'equal');
+    figWorkspace = criarFiguraEscura('TX90 – Área de Trabalho (Workspace)');
+    eixo = estilizarEixoEscuro(axes('Parent', figWorkspace));
+    view(eixo, 140, 22); axis(eixo, 'equal');
 
     scatter3(eixo, nuvem(1,:), nuvem(2,:), nuvem(3,:), 4, ...
         [0.30 0.45 0.65], 'filled', 'MarkerFaceAlpha', 0.15, 'DisplayName', 'Alcance amostrado');
@@ -645,20 +621,14 @@ end
 %  FUNÇÕES DE GRÁFICOS
 %  ------------------------------------------------------------------------
 function plotarPerfisJuntas(tempo, qTraj, qdTraj, qddTraj, numJuntas)
-    corFundo = [0.07 0.07 0.10];
-    corEixos = [0.65 0.75 0.85];
     mapaCores = lines(numJuntas);
     nomesJuntas = {'J1', 'J2', 'J3', 'J4', 'J5', 'J6'};
-    figPerfis = figure('Name', 'TX90 – Perfis de Junta', 'NumberTitle', 'off', ...
-        'Color', corFundo, 'Position', [1260 40 680 760]);
+    figPerfis = criarFiguraEscura('TX90 – Perfis de Junta');
     dados   = {qTraj, qdTraj, qddTraj};
     titulos = {'Posição (rad)', 'Velocidade (rad/s)', 'Aceleração (rad/s²)'};
 
     for grafico = 1:3
-        eixoSub = subplot(3, 1, grafico, 'Parent', figPerfis);
-        set(eixoSub, 'Color', corFundo, 'XColor', corEixos, 'YColor', corEixos, ...
-            'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
-        hold(eixoSub, 'on'); grid(eixoSub, 'on');
+        eixoSub = estilizarEixoEscuro(subplot(3, 1, grafico, 'Parent', figPerfis));
         for junta = 1:numJuntas
             plot(eixoSub, tempo, dados{grafico}(junta,:), 'LineWidth', 1.8, ...
                 'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -675,17 +645,11 @@ end
 
 % Gráfico torque x tempo (dinâmica inversa) por junta
 function plotarTorques(tempo, tauTraj, numJuntas)
-    corFundo = [0.07 0.07 0.10];
-    corEixos = [0.65 0.75 0.85];
     mapaCores = lines(numJuntas);
     nomesJuntas = {'J1', 'J2', 'J3', 'J4', 'J5', 'J6'};
 
-    figTorques = figure('Name', 'TX90 – Torques (Dinâmica Inversa)', 'NumberTitle', 'off', ...
-        'Color', corFundo, 'Position', [40 800 900 480]);
-    eixo = axes('Parent', figTorques);
-    set(eixo, 'Color', corFundo, 'XColor', corEixos, 'YColor', corEixos, ...
-        'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
-    hold(eixo, 'on'); grid(eixo, 'on');
+    figTorques = criarFiguraEscura('TX90 – Torques (Dinâmica Inversa)');
+    eixo = estilizarEixoEscuro(axes('Parent', figTorques));
     for junta = 1:numJuntas
         plot(eixo, tempo, tauTraj(junta,:), 'LineWidth', 1.8, ...
             'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -700,20 +664,14 @@ end
 
 % Gráfico comparando torque ideal vs torque do controlador e erro de rastreamento
 function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
-    corFundo = [0.07 0.07 0.10];
-    corEixos = [0.65 0.75 0.85];
     mapaCores = lines(numJuntas);
     nomesJuntas = {'J1', 'J2', 'J3', 'J4', 'J5', 'J6'};
     erro = qTraj - qSim;
 
-    figControle = figure('Name', 'TX90 – Controle PD + Compensação de Gravidade', 'NumberTitle', 'off', ...
-        'Color', corFundo, 'Position', [960 800 900 760]);
+    figControle = criarFiguraEscura('TX90 – Controle PD + Compensação de Gravidade');
 
     % Subplot 1: erro de rastreamento por junta
-    eixoErro = subplot(3, 1, 1, 'Parent', figControle);
-    set(eixoErro, 'Color', corFundo, 'XColor', corEixos, 'YColor', corEixos, ...
-        'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
-    hold(eixoErro, 'on'); grid(eixoErro, 'on');
+    eixoErro = estilizarEixoEscuro(subplot(3, 1, 1, 'Parent', figControle));
     for junta = 1:numJuntas
         plot(eixoErro, tempo, erro(junta,:), 'LineWidth', 1.6, ...
             'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -724,10 +682,7 @@ function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
         'Color', [0.12 0.12 0.18], 'EdgeColor', [0.30 0.30 0.40]);
 
     % Subplot 2: torque aplicado pelo controlador (PD + gravidade)
-    eixoTorque = subplot(3, 1, 2, 'Parent', figControle);
-    set(eixoTorque, 'Color', corFundo, 'XColor', corEixos, 'YColor', corEixos, ...
-        'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
-    hold(eixoTorque, 'on'); grid(eixoTorque, 'on');
+    eixoTorque = estilizarEixoEscuro(subplot(3, 1, 2, 'Parent', figControle));
     for junta = 1:numJuntas
         plot(eixoTorque, tempo, tauSim(junta,:), 'LineWidth', 1.6, ...
             'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -738,10 +693,7 @@ function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
         'Color', [0.12 0.12 0.18], 'EdgeColor', [0.30 0.30 0.40]);
 
     % Subplot 3: diferença entre torque ideal (dinâmica inversa) e o do controlador
-    eixoDif = subplot(3, 1, 3, 'Parent', figControle);
-    set(eixoDif, 'Color', corFundo, 'XColor', corEixos, 'YColor', corEixos, ...
-        'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
-    hold(eixoDif, 'on'); grid(eixoDif, 'on');
+    eixoDif = estilizarEixoEscuro(subplot(3, 1, 3, 'Parent', figControle));
     difTorque = tauTraj - tauSim;
     for junta = 1:numJuntas
         plot(eixoDif, tempo, difTorque(junta,:), 'LineWidth', 1.6, ...
@@ -756,4 +708,20 @@ function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
 
     sgtitle(figControle, 'TX90 – Desempenho do Controle PD + Compensação de Gravidade', ...
         'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+end
+
+%% ------------------------------------------------------------------------
+%  HELPERS DE ESTILO
+%  ------------------------------------------------------------------------
+% Cria uma figura com o tema escuro padrão do projeto
+function fig = criarFiguraEscura(nome)
+    fig = figure('Name', nome, 'NumberTitle', 'off', 'Color', [0.07 0.07 0.10]);
+end
+
+% Aplica o tema escuro padrão a um eixo existente e o devolve
+function eixo = estilizarEixoEscuro(eixo)
+    set(eixo, 'Color', [0.07 0.07 0.10], 'XColor', [0.65 0.75 0.85], ...
+        'YColor', [0.65 0.75 0.85], 'ZColor', [0.65 0.75 0.85], ...
+        'GridColor', [0.22 0.27 0.32], 'GridAlpha', 0.6, 'FontSize', 9);
+    hold(eixo, 'on'); grid(eixo, 'on');
 end
