@@ -1,0 +1,5 @@
+# Material de aula (referência, não faz parte da entrega)
+aulas/
+
+# Saídas geradas pela simulação MATLAB
+validation_outputs_matlab/

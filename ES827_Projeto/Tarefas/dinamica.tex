@@ -1,0 +1,180 @@
+\subsection{Verificação da Área de Trabalho}
+
+O espaço de trabalho (\textit{workspace}) de um manipulador serial de $n$
+graus de liberdade é definido como a imagem da cinemática direta
+$f:\mathbb{R}^n \to SE(3)$ restrita ao domínio dos limites articulares,
+\begin{equation}
+\mathcal{W} = \left\{\, \mathbf{p} \in \mathbb{R}^3 \;\middle|\;
+\mathbf{p} = f_{\text{pos}}(q),\ \ q \in \prod_{i=1}^{n}
+\left[q_i^{\min}, q_i^{\max}\right] \right\},
+\label{eq:workspace_def}
+\end{equation}
+onde $f_{\text{pos}}(q)$ é a componente de posição da transformação
+homogênea $T_0^n(q)$ do efetuador em relação à base. Para manipuladores com
+$n \geq 6$ e elos não triviais, $\mathcal{W}$ não possui, em geral, forma
+fechada analítica simples (ao contrário do caso planar de 2 elos, cujo
+limite é um anel circular obtido diretamente da lei dos cossenos); a
+prática usual é caracterizá-lo por envoltórias aproximadas: superfícies de
+alcance máximo e mínimo (esferas de raio $r_{\max}$ e $r_{\min}$ centradas
+na base) ou, de forma mais fiel à geometria real, por amostragem de
+Monte Carlo do espaço de juntas seguida da reconstrução de um casco que
+aproxima a fronteira de $\mathcal{W}$.
+
+Neste trabalho, adotou-se a segunda abordagem: $N = 50000$ configurações
+$q^{(k)} \sim \mathcal{U}\!\left(\prod_i [q_i^{\min}, q_i^{\max}]\right)$
+foram amostradas uniformemente dentro dos limites articulares informados
+pelo modelo URDF, e a posição do \textit{tool0} (TCP no código) foi calculada para cada uma
+via cinemática direta, gerando a nuvem $\{\mathbf{p}^{(k)}\}_{k=1}^{N}
+\subset \mathcal{W}$. Essa nuvem foi então utilizada para construir um
+casco convexo (\textit{alpha shape} com parâmetro $\alpha \to \infty$,
+equivalente ao \texttt{convhull} 3D), que serve como estimativa
+conservadora (por excesso, já que o casco convexo de $\mathcal{W}$ contém
+$\mathcal{W}$ sempre que este não for convexo) da região alcançável. Cada
+ponto $\mathbf{p}_j$ da trajetória cartesiana planejada foi então testado
+por inclusão nesse casco antes de qualquer cálculo de cinemática inversa,
+evitando que se investisse esforço computacional em resolver IK para
+pontos geometricamente inatingíveis.
+
+O alcance estimado do manipulador variou de $r_{\min} \approx
+0{,}013\,\text{m}$ a $r_{\max} \approx 1{,}431\,\text{m}$ a partir da base,
+valores compatíveis com a cadeia cinemática do TX90 (o raio mínimo próximo
+de zero decorre de configurações em que o punho se aproxima do eixo de
+J1). Os $91$ pontos que definem a trajetória desejada (retângulo, losango,
+círculo, arco e estação de troca de ferramenta) ficaram todos dentro dessa
+região, confirmando que a tarefa proposta é geometricamente compatível com
+o espaço de trabalho do robô.
+
+\subsection{Cálculo dos Torques via Dinâmica Inversa}
+
+\subsubsection{Modelo Dinâmico}
+
+A dinâmica de um manipulador serial rígido de $n$ graus de liberdade é
+descrita pela equação de movimento de Lagrange-Euler,
+\begin{equation}
+M(q)\,\ddot{q} + C(q,\dot{q})\,\dot{q} + G(q) = \tau,
+\label{eq:eq_movimento}
+\end{equation}
+conforme a formulação usual de dinâmica de manipuladores \cite{spong2006,siciliano2010,alkmin2026dinamica}, em que $M(q) \in \mathbb{R}^{n\times n}$ é a matriz de inércia (simétrica e
+positiva definida), $C(q,\dot{q})\,\dot{q}$ agrupa os efeitos centrífugos e
+de Coriolis, $G(q) = \partial \mathcal{U}(q)/\partial q$ é o vetor de
+torques gravitacionais (gradiente da energia potencial $\mathcal{U}$), e
+$\tau$ é o vetor de torques aplicados em cada junta. O problema de
+\textit{dinâmica inversa} consiste em, dados $q(t)$, $\dot{q}(t)$ e
+$\ddot{q}(t)$ desejados, calcular o $\tau(t)$ correspondente pela
+Equação~\eqref{eq:eq_movimento} — o problema oposto e mais custoso
+computacionalmente da \textit{dinâmica direta}, em que se obtém
+$\ddot{q} = M(q)^{-1}\big(\tau - C(q,\dot{q})\dot{q} - G(q)\big)$ a partir
+de $\tau$ conhecido.
+
+Na prática, $M(q)$ e $C(q,\dot{q})\dot{q}$ não são montadas explicitamente
+para manipuladores de vários elos; em vez disso, emprega-se o algoritmo
+recursivo de Newton--Euler, que calcula $\tau$ diretamente sem formar a
+matriz $M(q)$ de forma fechada, em duas varreduras pela cadeia cinemática:
+
+\begin{enumerate}
+\item \textbf{Recursão direta (base $\rightarrow$ efetuador):} para cada
+elo $i = 1,\dots,n$, propagam-se a velocidade angular $\boldsymbol{\omega}_i$,
+a aceleração angular $\dot{\boldsymbol{\omega}}_i$ e a aceleração linear do
+centro de massa $\mathbf{a}_{c_i}$, a partir das velocidades e acelerações
+do elo anterior e da velocidade/aceleração da junta $i$ ($\dot q_i$,
+$\ddot q_i$):
+\begin{align}
+\boldsymbol{\omega}_i &= \boldsymbol{\omega}_{i-1} + \dot q_i\, \hat{\mathbf z}_i, \\
+\dot{\boldsymbol{\omega}}_i &= \dot{\boldsymbol{\omega}}_{i-1}
++ \boldsymbol{\omega}_{i-1}\times \dot q_i \hat{\mathbf z}_i + \ddot q_i \hat{\mathbf z}_i, \\
+\mathbf{a}_{c_i} &= \dot{\boldsymbol{\omega}}_i \times \mathbf{r}_{c_i}
++ \boldsymbol{\omega}_i \times (\boldsymbol{\omega}_i \times \mathbf{r}_{c_i}) + \mathbf{a}_i,
+\end{align}
+com $\hat{\mathbf z}_i$ o eixo da junta $i$ e $\mathbf{r}_{c_i}$ o vetor do
+elo $i$ ao seu centro de massa.
+
+\item \textbf{Recursão inversa (efetuador $\rightarrow$ base):} propagam-se
+as forças $\mathbf{f}_i$ e torques $\mathbf{n}_i$ que cada elo exerce sobre
+o anterior, a partir da equação de Newton ($\mathbf{f}_i = m_i \mathbf{a}_{c_i}
++ \mathbf{f}_{i+1}$) e de Euler ($\mathbf{n}_i = I_i \dot{\boldsymbol{\omega}}_i
++ \boldsymbol{\omega}_i \times (I_i \boldsymbol{\omega}_i) + \dots$), e o
+torque de junta é obtido pela projeção
+$\tau_i = \mathbf{n}_i \cdot \hat{\mathbf z}_i$ (para juntas rotacionais).
+\end{enumerate}
+
+Essa formulação é a implementada pela função de dinâmica inversa do modelo
+importado do URDF, que já incorpora massa, tensor de inércia e centro de
+massa de cada elo conforme especificado no arquivo de descrição do robô.
+Ela foi aplicada à trajetória de juntas $q(t)$, $\dot{q}(t)$ e $\ddot{q}(t)$
+obtida por cinemática inversa (posição) e diferenciação numérica suavizada
+(velocidade e aceleração), produzindo o torque $\tau(t)$ "ideal" — isto é,
+o torque que, aplicado exatamente, executaria a trajetória planejada sem
+nenhum erro de rastreamento, servindo de referência para avaliar o
+controlador da Seção~\ref{sec:controle}.
+
+\subsection{Controle de Torque com Compensação de Gravidade (Feedforward)}
+\label{sec:controle}
+
+\subsubsection{Lei de Controle e Dinâmica do Erro}
+
+Para validar a trajetória de torques calculada em malha fechada, foi
+implementado um controlador da forma
+\begin{equation}
+\tau = K_p\,(q_{\text{ref}} - q) + K_d\,(\dot{q}_{\text{ref}} - \dot{q}) + G(q),
+\label{eq:controle_pd_gravidade}
+\end{equation}
+em que $G(q)$ é o torque gravitacional calculado pelo próprio modelo URDF
+(termo \textit{feedforward}, que cancela exatamente a parcela $G(q)$ da
+Equação~\eqref{eq:eq_movimento} quando $q$ está próximo de $q_{\text{ref}}$)
+e $K_p, K_d \in \mathbb{R}^{n\times n}$ são matrizes diagonais de ganho
+proporcional e derivativo. Substituindo~\eqref{eq:controle_pd_gravidade}
+em~\eqref{eq:eq_movimento} e definindo o erro $e = q_{\text{ref}} - q$,
+obtém-se a dinâmica de malha fechada
+\begin{equation}
+M(q)\,\ddot{e} + C(q,\dot q)\,\dot e + K_d\,\dot e + K_p\,e
+= M(q)\,\ddot{q}_{\text{ref}} + C(q,\dot q)\,\dot q_{\text{ref}}
++ \big[G(q) - G(q)\big],
+\label{eq:dinamica_erro}
+\end{equation}
+onde o termo de gravidade se cancela exatamente (por isso o nome
+\textit{feedforward de gravidade}), mas os termos de inércia $M(q)$ e de
+Coriolis/centrífugos $C(q,\dot q)$ do lado direito permanecem como
+\emph{perturbações não compensadas} — ou seja, essa lei de controle
+garante rejeição do efeito estático da gravidade em qualquer configuração,
+mas não cancela os efeitos dinâmicos de acoplamento entre juntas nem a
+dependência de $M(q)$ com a configuração, ao contrário de um controlador
+de torque computado completo ($\tau = M(q)\hat{\ddot q}_{\text{ref}} +
+C(q,\dot q)\dot q_{\text{ref}} + G(q) + K_p e + K_d \dot e$), que
+linearizaria exatamente a dinâmica do erro.
+
+\subsubsection{Sintonia dos Ganhos}
+
+Uma escolha comum de projeto é aproximar cada junta, de forma desacoplada,
+por um sistema de segunda ordem com inércia efetiva $M_{ii}(q_0)$ (o
+$i$-ésimo elemento diagonal da matriz de massa avaliada em uma configuração
+de referência $q_0$), cuja função de transferência em malha fechada para a
+Equação~\eqref{eq:dinamica_erro} linearizada (desprezando $C(q,\dot q)$) é
+\begin{equation}
+M_{ii}(q_0)\,\ddot e_i + K_{d,i}\,\dot e_i + K_{p,i}\,e_i = 0
+\;\;\Longleftrightarrow\;\;
+\ddot e_i + 2\zeta\omega_n\,\dot e_i + \omega_n^2\,e_i = 0,
+\label{eq:2a_ordem}
+\end{equation}
+de modo que, para uma frequência natural $\omega_n$ e um fator de
+amortecimento $\zeta$ desejados, os ganhos ficam determinados por
+\begin{equation}
+K_{p,i} = \omega_n^2\, M_{ii}(q_0), \qquad
+K_{d,i} = 2\zeta\omega_n\, M_{ii}(q_0).
+\label{eq:ganhos_wn_zeta}
+\end{equation}
+Essa parametrização é preferível a ganhos fixos e iguais para todas as
+juntas justamente porque $M_{ii}(q_0)$ varia em ordens de grandeza entre as
+juntas de base (mais inércia) e as do punho (muito menos inércia, como já
+evidenciado pelos torques de J4--J6 na Tabela~\ref{tab:torques_dinamica_inversa}):
+ganhos absolutos altos, adequados para J1--J3, tornam a Equação~\eqref{eq:2a_ordem}
+para J4--J6 um sistema de frequência natural efetiva muito mais alta
+($\omega_{n,\text{efetivo}} = \sqrt{K_p/M_{ii}}$), incompatível com o passo
+de integração numérica utilizado e levando à divergência do esquema
+explícito de integração. Adotou-se $\omega_n = 8\,\text{rad/s}$ e
+$\zeta = 1$ (amortecimento crítico, sem sobressinal na aproximação
+desacoplada), com $M(q_0)$ calculada na configuração inicial da
+trajetória. A dinâmica direta $\ddot q = M(q)^{-1}(\tau - C(q,\dot q)\dot q
+- G(q))$ foi integrada numericamente por Runge--Kutta de 4ª ordem (RK4)
+com passo fixo, sub-dividido em relação ao passo de amostragem da
+trajetória para manter o erro de truncamento local ($\mathcal{O}(h^5)$ por
+passo) pequeno frente às constantes de tempo do sistema em malha fechada.
