@@ -21,13 +21,13 @@ addBody(robot, paintTCP, 'tool0');
 limiteVelocidade = deg2rad([400; 400; 430; 540; 475; 760]);
 limiteTorque = [318; 166; 76; 34; 29; 11];
 
-%% Waypoints Cartesianos e Esta��o de Troca 
+%% Waypoints Cartesianos e Estação de Troca 
 Xc = 0.65; Yc = 0.0; Zc = 0.45;
 
-% Esta��o de Troca de Ferramenta (Afastada e lateral)
+% Estação de Troca de Ferramenta (Afastada e lateral)
 pTool = [0.5; 0.6; 0.2];
 
-% A. Ret�ngulo
+% A. Retângulo
 wR = 0.70; hR = 0.5;
 p1 = [Xc; Yc-wR/2; Zc+hR/2]; 
 p2 = [Xc; Yc+wR/2; Zc+hR/2]; 
@@ -43,7 +43,7 @@ p7 = [Xc; Yc; Zc-hL/2];
 p8 = [Xc; Yc-wL/2; Zc]; 
 pLosango = [p5, p6, p7, p8, p5];
 
-% C. Ci�rculo
+% C. Círculo
 rC = 0.1225;
 theta = linspace(pi/2, -3*pi/2, 40);
 pCirc = [Xc*ones(1,40); Yc + rC*cos(theta); Zc + rC*sin(theta)];
@@ -57,11 +57,11 @@ Zc = 0.2;
 
 rA = 0.28875;
 
-% �ngulos inicial e final do arco
+% Ângulos inicial e final do arco
 theta0 = atan2(0.28483, -0.11745 + 0.07);
 thetaF = atan2(0.21877, 0.11845 + 0.07);
 
-% Vetor de �ngulos
+% Vetor de ângulos
 theta = linspace(theta0, thetaF, 40);
 
 % Pontos do arco
@@ -71,36 +71,36 @@ pArc = [ ...
     Zc + rA*sin(theta)
 ];
 
-%%  3. Constru��o da Trajet�ria (Idas e Vindas � Esta��o) 
+%%  3. Construção da Trajetória (Idas e Vindas à Estação) 
 dt = 0.04;           % Passo de tempo (s)
 v_draw = 0.12;       % Velocidade maxima durante o desenho (m/s)
 a_draw = 0.30;       % Aceleracao maxima durante o desenho (m/s2)
 v_trans = 0.35;      % Velocidade maxima nas transicoes (m/s)
 a_trans = 0.60;      % Aceleracao maxima nas transicoes (m/s2)
 
-% 1=Verde, 2=Cinza(Transi��o/Movimento Livre), 3=Amarelo, 4=Azul
+% 1=Verde, 2=Cinza(Transição/Movimento Livre), 3=Amarelo, 4=Azul
 
-% Inicio: Esta��o -> Ret�ngulo -> Esta��o
+% Inicio: Estação -> Retângulo -> Estação
 [p_T1, c_T1, v_T1, a_T1] = interpTransicao(pTool, pRetangulo(:,1), v_trans, a_trans, dt, 2);
 [p_R,  c_R,  v_R,  a_R]  = interpCartesianaConstante(pRetangulo, v_draw, a_draw, dt, 1);
 [p_T2, c_T2, v_T2, a_T2] = interpTransicao(pRetangulo(:,end), pTool, v_trans, a_trans, dt, 2);
 
-% Esta��o -> Losango -> Esta��o
+% Estação -> Losango -> Estação
 [p_T3, c_T3, v_T3, a_T3] = interpTransicao(pTool, pLosango(:,1), v_trans, a_trans, dt, 2);
 [p_L,  c_L,  v_L,  a_L]  = interpCartesianaConstante(pLosango, v_draw, a_draw, dt, 3);
 [p_T4, c_T4, v_T4, a_T4] = interpTransicao(pLosango(:,end), pTool, v_trans, a_trans, dt, 2);
 
-% Esta��o -> C�rculo -> Esta��o
+% Estação -> Círculo -> Estação
 [p_T5, c_T5, v_T5, a_T5] = interpTransicao(pTool, pCirc(:,1), v_trans, a_trans, dt, 2);
 [p_C,  c_C,  v_C,  a_C]  = interpArco([0.65;0;0.45], rC, pi/2, -3*pi/2, v_draw, a_draw, dt, 4);
 [p_T6, c_T6, v_T6, a_T6] = interpTransicao(pCirc(:,1), pTool, v_trans, a_trans, dt, 2);
 
-% Esta��o -> arco -> Guarda Ferramenta
+% Estação -> arco -> Guarda Ferramenta
 [p_T7, c_T7, v_T7, a_T7] = interpTransicao(pTool, pArc(:,1), v_trans, a_trans, dt, 2);
 [p_A,  c_A,  v_A,  a_A]  = interpArco([0.65;-0.07;0.2], rA, theta0, thetaF, v_draw, a_draw, dt, 5);
 [p_T8, c_T8, v_T8, a_T8] = interpTransicao(pArc(:,end), pTool, v_trans, a_trans, dt, 2);
 
-% Concatena tudo (removendo o 1� ponto dos blocos subsequentes)
+% Concatena tudo (removendo o 1º ponto dos blocos subsequentes)
 pos_cart = [p_T1, p_R(:,2:end), p_T2(:,2:end), p_T3(:,2:end), p_L(:,2:end), ...
             p_T4(:,2:end), p_T5(:,2:end), p_C(:,2:end), p_T6(:,2:end), p_T7(:,2:end), p_A(:,2:end), p_T8(:,2:end)];
         
@@ -119,11 +119,11 @@ fprintf('Trajetoria: %d pontos, duracao %.2f s.\n', numSteps, tvec(end));
 fprintf('Velocidade cartesiana comandada maxima: %.4f m/s.\n', max(vel_cart));
 fprintf('Aceleracao cartesiana comandada maxima: %.4f m/s^2.\n', max(abs(acc_cart)));
 
-%%  3.5 Verifica��o da �rea de Trabalho (Workspace) 
-% Amostra o espa�o de juntas (dentro dos limites do URDF) para estimar a
-% nuvem de pontos alcan��veis pela ponta do aplicador, e verifica se todos os pontos da
-% trajet�ria desejada (incluindo a esta��o de troca) caem dentro dela.
-fprintf('Verificando �rea de trabalho do manipulador...\n');
+%%  3.5 Verificação da Área de Trabalho (Workspace) 
+% Amostra o espaço de juntas (dentro dos limites do URDF) para estimar a
+% nuvem de pontos alcançáveis pela ponta do aplicador, e verifica se todos os pontos da
+% trajetória desejada (incluindo a estação de troca) caem dentro dela.
+fprintf('Verificando área de trabalho do manipulador...\n');
 numAmostrasWS = 50000;
 nuvemWS = calcularAreaTrabalho(robot, numAmostrasWS);
 
@@ -131,12 +131,12 @@ pontosDesejados = [pRetangulo, pLosango, pCirc, pArc, pTool];
 verificarAlcancePontos(pontosDesejados, nuvemWS);
 plotAreaTrabalho(nuvemWS, pontosDesejados);
 
-%%  4. Cinem�tica Inversa (IK) 
-fprintf('Calculando Cinem�tica Inversa. Aguarde...\n');
+%%  4. Cinemática Inversa (IK) 
+fprintf('Calculando Cinemática Inversa. Aguarde...\n');
 ik = inverseKinematics('RigidBodyTree', robot);
 ikWeights = [0.5 0.5 0.5 1 1 1]; 
 
-% Orienta��o frontal (+X) mantida em toda a opera��o
+% Orientação frontal (+X) mantida em toda a operação
 R_fixed = [ 0  0  1; 
             0  1  0; 
            -1  0  0 ];
@@ -184,13 +184,13 @@ if any(max(abs(qd_traj),[],2) > limiteVelocidade)
     error('A trajetoria ultrapassa o limite de velocidade de uma junta.');
 end
 
-%%  4b. Din�mica: C�lculo dos Torques Necess�rios (a partir do URDF) 
-% Torque "ideal" (feedforward completo) que a din�mica inversa do rob�
-% exige para executar exatamente a trajet�ria planejada (q, qd, qdd).
-fprintf('Calculando torques via din�mica inversa (modelo URDF)...\n');
+%%  4b. Dinâmica: Cálculo dos Torques Necessários (a partir do URDF) 
+% Torque "ideal" (feedforward completo) que a dinâmica inversa do robô
+% exige para executar exatamente a trajetória planejada (q, qd, qdd).
+fprintf('Calculando torques via dinâmica inversa (modelo URDF)...\n');
 tau_traj = calcularTorques(robot, q_traj, qd_traj, qdd_traj);
 
-% An�lise r�pida dos torques (impressa no console)
+% Análise rápida dos torques (impressa no console)
 analisarTorques(tau_traj, tvec, numDoF);
 
 torqueMaximo = max(abs(tau_traj), [], 2);
@@ -198,18 +198,18 @@ if any(torqueMaximo > limiteTorque)
     error('A trajetoria ultrapassa o limite de torque de uma junta.');
 end
 
-%%  4c. Controle de Torque com Compensa��o de Gravidade (Feedforward) 
+%%  4c. Controle de Torque com Compensação de Gravidade (Feedforward) 
 % Lei de controle:  tau = Kp*(q_ref - q) + Kd*(qd_ref - qd) + G(q)
-% onde G(q) � o torque gravitacional calculado pelo modelo URDF (feedforward),
-% e o termo PD realimenta o erro de posi��o/velocidade medido em malha fechada.
-fprintf('Simulando controle PD + compensa��o de gravidade (feedforward)...\n');
+% onde G(q) é o torque gravitacional calculado pelo modelo URDF (feedforward),
+% e o termo PD realimenta o erro de posição/velocidade medido em malha fechada.
+fprintf('Simulando controle PD + compensação de gravidade (feedforward)...\n');
 
-% Os ganhos s�o calculados a partir da matriz de massa M(q0) do pr�prio
-% rob�, e n�o fixados arbitrariamente. Isso � necess�rio porque juntas com
-% pouca in�rcia (ex.: punho, J4-J6) ficam inst�veis com ganhos altos demais
-% (frequ�ncia natural de malha fechada incompat�vel com o passo de
-% integra��o), enquanto juntas de base (J1-J3, mais massa) toleram e
-% precisam de ganhos maiores. Crit�rio: wn = frequ�ncia natural desejada,
+% Os ganhos são calculados a partir da matriz de massa M(q0) do próprio
+% robô, e não fixados arbitrariamente. Isso é necessário porque juntas com
+% pouca inércia (ex.: punho, J4-J6) ficam instáveis com ganhos altos demais
+% (frequência natural de malha fechada incompatível com o passo de
+% integração), enquanto juntas de base (J1-J3, mais massa) toleram e
+% precisam de ganhos maiores. Critério: wn = frequência natural desejada,
 % zeta = fator de amortecimento (1 = criticamente amortecido).
 wn   = 5;      % rad/s
 zeta = 1.0;
@@ -218,15 +218,15 @@ M0 = massMatrix(robot, q_traj(:,1)');
 Kp = (wn^2) * diag(M0);
 Kd = (2*zeta*wn) * diag(M0);
 
-% Limite de torque de seguran�a (satura o comando do controlador para
-% evitar picos irreais/instabilidade num�rica caso a malha fechada oscile);
+% Limite de torque de segurança (satura o comando do controlador para
+% evitar picos irreais/instabilidade numérica caso a malha fechada oscile);
 % usando os limites de esforco informados para cada junta.
 tauLimite = limiteTorque;
 
 [qSim, qdSim, tauSim] = controlePDGravidade(robot, tvec, q_traj, qd_traj, Kp, Kd, tauLimite);
 [qSimCT, ~, ~] = controleTorqueComputado(robot, tvec, q_traj, qd_traj, qdd_traj, wn, zeta, tauLimite);
 
-% An�lise do desempenho do controlador (erro de rastreamento, torque aplicado)
+% Análise do desempenho do controlador (erro de rastreamento, torque aplicado)
 analisarControle(tvec, q_traj, qSim, tau_traj, tauSim, numDoF);
 
 erroPD = sqrt(mean((q_traj - qSim).^2, 2));
@@ -241,7 +241,7 @@ fprintf('RMS erro PD+G [rad]: %s\n', mat2str(erroPD',4));
 fprintf('RMS erro torque computado [rad]: %s\n', mat2str(erroCT',4));
 
 %%  5. Setup da Figura 
-hFig = figure('Name','TX90 v9 � Troca de Ferramentas', ...
+hFig = figure('Name','TX90 v9 – Troca de Ferramentas', ...
     'NumberTitle','off', 'Color',[0.07 0.07 0.10], 'Position',[40 40 1200 730]);
 
 ax = axes('Parent',hFig, 'Color',[0.07 0.07 0.10], 'XColor',[0.55 0.65 0.75], ...
@@ -255,20 +255,20 @@ camlight(ax, 'headlight'); camlight(ax, 'right'); lighting(ax, 'gouraud');
 
 % Mapeamento de cores
 coresBandeira = [
-    0.00  0.80  0.30;  % 1: Verde (Ret�ngulo)
-    0.40  0.40  0.45;  % 2: Cinza (Transi��o/Livre)
+    0.00  0.80  0.30;  % 1: Verde (Retângulo)
+    0.40  0.40  0.45;  % 2: Cinza (Transição/Livre)
     1.00  0.85  0.00;  % 3: Amarelo (Losango)
-    0.00  0.50  1.00   % 4: Azul (C�rculo)
-    1.00  1.0  1.0   % 5: Branco (C�rculo)
+    0.00  0.50  1.00   % 4: Azul (Círculo)
+    1.00  1.0  1.0   % 5: Branco (Círculo)
 ];
 colormap(ax, coresBandeira);
 set(ax, 'CLim', [1 5]); 
 
-%%  6. Renderiza��o Inicial 
-% Marcador da Esta��o de Troca
+%%  6. Renderização Inicial 
+% Marcador da Estação de Troca
 plot3(ax, pTool(1), pTool(2), pTool(3), 's', 'MarkerSize', 16, ...
     'MarkerFaceColor', [0.3 0.3 0.3], 'MarkerEdgeColor', 'w', 'LineWidth', 1.5);
-text(ax, pTool(1), pTool(2), pTool(3)+0.12, 'Esta��o de Cores', ...
+text(ax, pTool(1), pTool(2), pTool(3)+0.12, 'Estação de Cores', ...
     'Color', [0.8 0.8 0.9], 'HorizontalAlignment', 'center', 'FontSize', 9, 'FontWeight', 'bold');
 
 % Rastro principal
@@ -280,7 +280,7 @@ hTCP = plot3(ax, NaN,NaN,NaN, 'o', 'MarkerSize',8, ...
 xlabel(ax,'X (m)','Color','w'); ylabel(ax,'Y (m)','Color','w'); zlabel(ax,'Z (m)','Color','w');
 hTitle = title(ax,'TX90  |  Iniciando...', 'Color',[0.95 0.95 1.0],'FontSize',13,'FontWeight','bold');
 
-%%  7. Loop de anima��o 
+%%  7. Loop de animação 
 show(robot, q_traj(:,1)', 'Parent',ax, 'Visuals','on','Frames','off','PreservePlot',false);
 
 tStart = tic;
@@ -294,7 +294,7 @@ for i = 1:numSteps
     set(hRastroVivo, 'XData',eePath(1,1:i), 'YData',eePath(2,1:i), ...
                      'ZData',eePath(3,1:i), 'CData',color_idx(1:i));
     
-    % Atualiza o t�tulo baseado no status atual
+    % Atualiza o título baseado no status atual
     if color_idx(i) == 2
         status = 'Equipando Tinta';
     else
@@ -309,16 +309,16 @@ for i = 1:numSteps
 end
 
 if isvalid(hFig)
-    set(hTitle,'String','TX90  |  Bandeira Conclu�da ','Color',[0.35 1.0 0.55]);
+    set(hTitle,'String','TX90  |  Bandeira Concluída ','Color',[0.35 1.0 0.55]);
 end
 
-%%  8. Gr�ficos: perfis de junta, torques e controle 
+%%  8. Gráficos: perfis de junta, torques e controle 
 plotPerfisJunta(tvec, q_traj, qd_traj, qdd_traj, numDoF);
 plotTorques(tvec, tau_traj, numDoF);
 plotControleResultados(tvec, q_traj, qSim, tau_traj, tauSim, numDoF);
 
 %% 
-%  FUN��ES DE GERA��O DE TRAJET�RIA, DIN�MICA, CONTROLE E PLOT
+%  FUNÇÕES DE GERAÇÃO DE TRAJETÓRIA, DINÂMICA, CONTROLE E PLOT
 % 
 function [p_out, c_out, v_out, a_out] = interpCartesianaConstante(waypoints, v_draw, a_draw, dt, color_code)
     p_out = [];
@@ -410,7 +410,7 @@ function [s, v, a] = perfilLSPB(dist, v_max, a_max, dt)
     v([1 end]) = 0;
 end
 
-%  Din�mica inversa: torque necess�rio para (q, qd, qdd) ao longo do tempo
+%  Dinâmica inversa: torque necessário para (q, qd, qdd) ao longo do tempo
 function tau_traj = calcularTorques(robot, q_traj, qd_traj, qdd_traj)
     numDoF   = size(q_traj,1);
     numSteps = size(q_traj,2);
@@ -423,21 +423,21 @@ function tau_traj = calcularTorques(robot, q_traj, qd_traj, qdd_traj)
     warning(estadoAvisos);
 end
 
-%  An�lise textual dos torques calculados pela din�mica inversa
+%  Análise textual dos torques calculados pela dinâmica inversa
 function analisarTorques(tau_traj, tvec, numDoF)
-    fprintf('\n--- An�lise dos Torques (Din�mica Inversa) ---\n');
+    fprintf('\n--- Análise dos Torques (Dinâmica Inversa) ---\n');
     jNames = {'J1','J2','J3','J4','J5','J6'};
     for j = 1:numDoF
         tauMax = max(abs(tau_traj(j,:)));
         tauRMS = rms(tau_traj(j,:));
         [~, idxMax] = max(abs(tau_traj(j,:)));
-        fprintf('%s: torque m�x = %6.2f Nm (em t = %5.2f s)  |  RMS = %6.2f Nm\n', ...
+        fprintf('%s: torque máx = %6.2f Nm (em t = %5.2f s)  |  RMS = %6.2f Nm\n', ...
             jNames{j}, tauMax, tvec(idxMax), tauRMS);
     end
     fprintf('-----------------------------------------------\n\n');
 end
 
-%  Controle PD + compensa��o de gravidade (feedforward)
+%  Controle PD + compensação de gravidade (feedforward)
 % Integracao em passo fixo, com dois sub-passos em cada amostra.
 function [qSim, qdSim, tauSim] = controlePDGravidade(robot, tvec, q_traj, qd_traj, Kp, Kd, tauLimite)
     numDoF   = size(q_traj,1);
@@ -509,7 +509,7 @@ function [qSim, qdSim, tauSim] = controleTorqueComputado(robot, tvec, q_traj, qd
     tauSim(:,end) = tauSim(:,end-1);
 end
 
-%  Um passo de integra��o RK4 da din�mica direta (torque constante no passo)
+%  Um passo de integração RK4 da dinâmica direta (torque constante no passo)
 function [qNext, qdNext] = rk4StepDinamica(robot, q, qd, tau, h)
     f = @(qq, qqd) forwardDynamics(robot, qq', qqd', tau')';
 
@@ -522,8 +522,8 @@ function [qNext, qdNext] = rk4StepDinamica(robot, q, qd, tau, h)
     qdNext = qd + (h/6)*(k1qd + 2*k2qd + 2*k3qd + k4qd);
 end
 
-%  Amostra o espa�o de juntas dentro dos limites do URDF e calcula a nuvem
-%    de pontos alcan��veis pela ponta do aplicador (estimativa da area de trabalho)
+%  Amostra o espaço de juntas dentro dos limites do URDF e calcula a nuvem
+%    de pontos alcançáveis pela ponta do aplicador (estimativa da area de trabalho)
 function nuvem = calcularAreaTrabalho(robot, numAmostras)
     numDoF  = numel(homeConfiguration(robot));
     limites = zeros(numDoF, 2);
@@ -551,7 +551,7 @@ function nuvem = calcularAreaTrabalho(robot, numAmostras)
     warning(estadoAvisos);
 end
 
-%  Verifica se os pontos desejados da trajet�ria est�o dentro da nuvem
+%  Verifica se os pontos desejados da trajetória estão dentro da nuvem
 %    de alcance estimada (usando o casco/forma alfa da nuvem amostrada)
 function verificarAlcancePontos(pontosDesejados, nuvem)
     basePos = [0;0;0];
@@ -564,15 +564,15 @@ function verificarAlcancePontos(pontosDesejados, nuvem)
         shp = alphaShape(nuvem(1,:)', nuvem(2,:)', nuvem(3,:)', Inf); % Inf = casco convexo
         dentro = inShape(shp, pontosDesejados(1,:)', pontosDesejados(2,:)', pontosDesejados(3,:)');
     catch
-        % Fallback: verifica��o simplificada por raio (casca esf�rica aproximada)
+        % Fallback: verificação simplificada por raio (casca esférica aproximada)
         dentro = (raiosPontos <= raioMax) & (raiosPontos >= raioMin);
     end
 
-    fprintf('\n--- Verifica��o da �rea de Trabalho ---\n');
-    fprintf('Alcance estimado (amostragem): %.3f m (m�n) a %.3f m (m�x) a partir da base\n', raioMin, raioMax);
+    fprintf('\n--- Verificação da Área de Trabalho ---\n');
+    fprintf('Alcance estimado (amostragem): %.3f m (mín) a %.3f m (máx) a partir da base\n', raioMin, raioMax);
     nFora = sum(~dentro);
     if nFora > 0
-        fprintf(2, 'ATEN��O: %d de %d pontos da trajet�ria est�o FORA da �rea de trabalho estimada!\n', ...
+        fprintf(2, 'ATENÇÃO: %d de %d pontos da trajetória estão FORA da área de trabalho estimada!\n', ...
             nFora, numel(dentro));
         idxFora = find(~dentro);
         for k = 1:min(10, numel(idxFora))
@@ -584,15 +584,15 @@ function verificarAlcancePontos(pontosDesejados, nuvem)
             fprintf('  ... e mais %d ponto(s).\n', numel(idxFora) - 10);
         end
     else
-        fprintf('Todos os %d pontos da trajet�ria est�o dentro da �rea de trabalho estimada.\n', numel(dentro));
+        fprintf('Todos os %d pontos da trajetória estão dentro da área de trabalho estimada.\n', numel(dentro));
     end
     fprintf('----------------------------------------\n\n');
 end
 
-%  Plota a nuvem de pontos da �rea de trabalho junto com a trajet�ria desejada
+%  Plota a nuvem de pontos da área de trabalho junto com a trajetória desejada
 function plotAreaTrabalho(nuvem, pontosDesejados)
     bg = [0.07 0.07 0.10]; axC = [0.65 0.75 0.85];
-    hF0 = figure('Name','TX90 � �rea de Trabalho (Workspace)', 'NumberTitle','off', ...
+    hF0 = figure('Name','TX90 – Área de Trabalho (Workspace)', 'NumberTitle','off', ...
         'Color',bg,'Position',[40 40 700 600]);
     ax0 = axes('Parent',hF0);
     set(ax0,'Color',bg,'XColor',axC,'YColor',axC,'ZColor',axC, ...
@@ -603,25 +603,25 @@ function plotAreaTrabalho(nuvem, pontosDesejados)
         [0.30 0.45 0.65], 'filled', 'MarkerFaceAlpha', 0.15, 'DisplayName','Alcance amostrado');
     plot3(ax0, pontosDesejados(1,:), pontosDesejados(2,:), pontosDesejados(3,:), ...
         'o', 'MarkerSize', 5, 'MarkerFaceColor',[1 0.4 0.2], 'MarkerEdgeColor','w', ...
-        'DisplayName','Pontos da trajet�ria');
+        'DisplayName','Pontos da trajetória');
 
     xlabel(ax0,'X (m)','Color','w'); ylabel(ax0,'Y (m)','Color','w'); zlabel(ax0,'Z (m)','Color','w');
-    title(ax0,'�rea de Trabalho Estimada vs. Trajet�ria Desejada', ...
+    title(ax0,'Área de Trabalho Estimada vs. Trajetória Desejada', ...
         'Color','w','FontSize',12,'FontWeight','bold');
     legend(ax0,'Location','best','TextColor','w','Color',[0.12 0.12 0.18],'EdgeColor',[0.30 0.30 0.40]);
 end
 
-%  An�lise do desempenho do controlador (erro de rastreamento e torque)
+%  Análise do desempenho do controlador (erro de rastreamento e torque)
 function analisarControle(tvec, q_traj, qSim, tau_traj, tauSim, numDoF)
     jNames = {'J1','J2','J3','J4','J5','J6'};
     erro = q_traj - qSim;
 
-    fprintf('\n--- An�lise do Controle PD + Compensa��o de Gravidade ---\n');
+    fprintf('\n--- Análise do Controle PD + Compensação de Gravidade ---\n');
     for j = 1:numDoF
         erroMax = max(abs(erro(j,:)), [], 'omitnan');
         erroRMS = rms(erro(j,:), 'omitnan');
         tauMaxSim = max(abs(tauSim(j,:)), [], 'omitnan');
-        fprintf('%s: erro m�x = %7.4f rad | erro RMS = %7.4f rad | torque aplicado m�x = %6.2f Nm\n', ...
+        fprintf('%s: erro máx = %7.4f rad | erro RMS = %7.4f rad | torque aplicado máx = %6.2f Nm\n', ...
             jNames{j}, erroMax, erroRMS, tauMaxSim);
     end
 
@@ -630,7 +630,7 @@ function analisarControle(tvec, q_traj, qSim, tau_traj, tauSim, numDoF)
     for j = 1:numDoF
         rmsPorJunta(j) = rms(diffTau(j,:), 'omitnan');
     end
-    fprintf('Diferen�a RMS (torque ideal - torque do controlador): %.3f Nm (m�dia entre juntas)\n', ...
+    fprintf('Diferença RMS (torque ideal - torque do controlador): %.3f Nm (média entre juntas)\n', ...
         mean(rmsPorJunta, 'omitnan'));
     fprintf('-----------------------------------------------------------\n\n');
 end
@@ -638,9 +638,9 @@ end
 function plotPerfisJunta(tvec, q_traj, qd_traj, qdd_traj, numDoF)
     bg = [0.07 0.07 0.10]; axC = [0.65 0.75 0.85]; cmap = lines(numDoF);
     jNames = {'J1','J2','J3','J4','J5','J6'};
-    hF2 = figure('Name','TX90 � Perfis de Junta', 'NumberTitle','off','Color',bg,'Position',[1260 40 680 760]);
+    hF2 = figure('Name','TX90 – Perfis de Junta', 'NumberTitle','off','Color',bg,'Position',[1260 40 680 760]);
     dados   = {q_traj,   qd_traj,   qdd_traj};
-    titulos = {'Posi��o (rad)','Velocidade (rad/s)','Acelera��o (rad/s�)'};
+    titulos = {'Posição (rad)','Velocidade (rad/s)','Aceleração (rad/s²)'};
 
     for s = 1:3
         ax_s = subplot(3,1,s,'Parent',hF2);
@@ -654,15 +654,15 @@ function plotPerfisJunta(tvec, q_traj, qd_traj, qdd_traj, numDoF)
         if s == 3, xlabel(ax_s,'Tempo (s)','Color','w','FontSize',10); end
         legend(ax_s, jNames,'Location','best','TextColor','w','Color',[0.12 0.12 0.18],'EdgeColor',[0.30 0.30 0.40]);
     end
-    sgtitle(hF2,'TX90 � Perfis de Junta (Troca de Ferramenta)','Color','w','FontSize',12,'FontWeight','bold');
+    sgtitle(hF2,'TX90 – Perfis de Junta (Troca de Ferramenta)','Color','w','FontSize',12,'FontWeight','bold');
 end
 
-%  Gr�fico Torque x Tempo (din�mica inversa) por junta
+%  Gráfico Torque x Tempo (dinâmica inversa) por junta
 function plotTorques(tvec, tau_traj, numDoF)
     bg = [0.07 0.07 0.10]; axC = [0.65 0.75 0.85]; cmap = lines(numDoF);
     jNames = {'J1','J2','J3','J4','J5','J6'};
 
-    hF3 = figure('Name','TX90 � Torques (Din�mica Inversa)', 'NumberTitle','off', ...
+    hF3 = figure('Name','TX90 – Torques (Dinâmica Inversa)', 'NumberTitle','off', ...
         'Color',bg,'Position',[40 800 900 480]);
     ax3 = axes('Parent',hF3);
     set(ax3,'Color',bg,'XColor',axC,'YColor',axC,'GridColor',[0.22 0.27 0.32],'GridAlpha',0.6,'FontSize',9);
@@ -672,18 +672,18 @@ function plotTorques(tvec, tau_traj, numDoF)
     end
     xlabel(ax3,'Tempo (s)','Color','w','FontSize',10);
     ylabel(ax3,'Torque (Nm)','Color','w','FontSize',10);
-    title(ax3,'Torque por Junta ao Longo da Trajet�ria (Din�mica Inversa)', ...
+    title(ax3,'Torque por Junta ao Longo da Trajetória (Dinâmica Inversa)', ...
         'Color','w','FontWeight','bold');
     legend(ax3, jNames,'Location','best','TextColor','w','Color',[0.12 0.12 0.18],'EdgeColor',[0.30 0.30 0.40]);
 end
 
-%  Gr�fico comparando torque ideal vs torque do controlador, e erro de rastreamento
+%  Gráfico comparando torque ideal vs torque do controlador, e erro de rastreamento
 function plotControleResultados(tvec, q_traj, qSim, tau_traj, tauSim, numDoF)
     bg = [0.07 0.07 0.10]; axC = [0.65 0.75 0.85]; cmap = lines(numDoF);
     jNames = {'J1','J2','J3','J4','J5','J6'};
     erro = q_traj - qSim;
 
-    hF4 = figure('Name','TX90 � Controle PD + Compensa��o de Gravidade', 'NumberTitle','off', ...
+    hF4 = figure('Name','TX90 – Controle PD + Compensação de Gravidade', 'NumberTitle','off', ...
         'Color',bg,'Position',[960 800 900 760]);
 
     % Subplot 1: erro de rastreamento por junta
@@ -708,7 +708,7 @@ function plotControleResultados(tvec, q_traj, qSim, tau_traj, tauSim, numDoF)
     title(ax4b,'Torque Aplicado pelo Controlador (PD + Gravidade)','Color','w','FontWeight','bold');
     legend(ax4b, jNames,'Location','best','TextColor','w','Color',[0.12 0.12 0.18],'EdgeColor',[0.30 0.30 0.40]);
 
-    % Subplot 3: compara��o torque ideal (din�mica inversa) vs torque do controlador, junta a junta (m�dia das diferen�as)
+    % Subplot 3: comparação torque ideal (dinâmica inversa) vs torque do controlador, junta a junta (média das diferenças)
     ax4c = subplot(3,1,3,'Parent',hF4);
     set(ax4c,'Color',bg,'XColor',axC,'YColor',axC,'GridColor',[0.22 0.27 0.32],'GridAlpha',0.6,'FontSize',9);
     hold(ax4c,'on'); grid(ax4c,'on');
@@ -718,8 +718,8 @@ function plotControleResultados(tvec, q_traj, qSim, tau_traj, tauSim, numDoF)
     end
     xlabel(ax4c,'Tempo (s)','Color','w','FontSize',10);
     ylabel(ax4c,' Torque (Nm)','Color','w','FontSize',10);
-    title(ax4c,'Diferen�a: Torque Ideal (Din. Inversa)  Torque do Controlador','Color','w','FontWeight','bold');
+    title(ax4c,'Diferença: Torque Ideal (Din. Inversa)  Torque do Controlador','Color','w','FontWeight','bold');
     legend(ax4c, jNames,'Location','best','TextColor','w','Color',[0.12 0.12 0.18],'EdgeColor',[0.30 0.30 0.40]);
 
-    sgtitle(hF4,'TX90 � Desempenho do Controle PD + Compensa��o de Gravidade','Color','w','FontSize',12,'FontWeight','bold');
+    sgtitle(hF4,'TX90 – Desempenho do Controle PD + Compensação de Gravidade','Color','w','FontSize',12,'FontWeight','bold');
 end
