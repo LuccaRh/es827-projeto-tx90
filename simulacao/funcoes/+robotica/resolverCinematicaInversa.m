@@ -1,7 +1,6 @@
-% Resolve a cinemática inversa ponto a ponto (usando a solução anterior como
-% estimativa inicial, para manter a continuidade do movimento) e valida cada
-% solução por cinemática direta: erro de posição, erro de orientação e menor
-% valor singular do Jacobiano (proximidade de singularidade).
+% Resolve a cinemática inversa de waypoint a waypoint.
+% Retorna os angulos de cada junta para cada passo numa matriz 6xN.
+% Faz a verificação de erros de posição e orientação, comparando a posição do efetuador reconstruída via cinemática direta com a posição desejada.
 function [qTraj, caminhoEfetuador, erroPos, erroOri, sigmaMin] = resolverCinematicaInversa(robo, posCart, rFerramenta, pesosIk)
     arguments
         robo (1,1) rigidBodyTree

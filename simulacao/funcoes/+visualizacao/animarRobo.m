@@ -26,7 +26,9 @@ function animarRobo(robo, qTraj, caminhoEfetuador, corTraj, tempo, coresRastro, 
         'YColor', [0.55 0.65 0.75], 'ZColor', [0.55 0.65 0.75], ...
         'GridColor', [0.20 0.25 0.30], 'GridAlpha', 0.55, 'FontSize', 10);
 
-    hold(eixoAnim, 'on'); grid(eixoAnim, 'on'); view(eixoAnim, 140, 22); axis(eixoAnim, 'equal');
+    % Câmera olhando a FRENTE da bandeira (lado -X, onde os enfeites ficam à
+    % frente do verde). Para ver o outro lado, use 140 no lugar de -40.
+    hold(eixoAnim, 'on'); grid(eixoAnim, 'on'); view(eixoAnim, -40, 22); axis(eixoAnim, 'equal');
     xlim(eixoAnim, [-0.10, 1.10]); ylim(eixoAnim, [-0.80, 0.80]); zlim(eixoAnim, [0.00, 1.00]);
 
     camlight(eixoAnim, 'headlight'); camlight(eixoAnim, 'right'); lighting(eixoAnim, 'gouraud');
@@ -41,7 +43,7 @@ function animarRobo(robo, qTraj, caminhoEfetuador, corTraj, tempo, coresRastro, 
         'Color', [0.8 0.8 0.9], 'HorizontalAlignment', 'center', 'FontSize', 9, 'FontWeight', 'bold');
 
     % Rastro da pintura e marcador do TCP
-    rastro = scatter3(eixoAnim, NaN, NaN, NaN, 18, NaN, 'filled', 'MarkerEdgeColor', 'none');
+    rastro = scatter3(eixoAnim, NaN, NaN, NaN, 26, NaN, 'filled', 'MarkerEdgeColor', 'none');
     marcadorTCP = plot3(eixoAnim, NaN, NaN, NaN, 'o', 'MarkerSize', 8, ...
         'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 1.2);
 

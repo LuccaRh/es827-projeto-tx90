@@ -26,6 +26,14 @@ ACEL_PINTURA   = 0.30;   % aceleração máxima com spray ligado [m/s^2]
 VEL_TRANSICAO  = 0.35;   % velocidade máxima em movimento livre [m/s]
 ACEL_TRANSICAO = 0.60;   % aceleração máxima em movimento livre [m/s^2]
 
+% --- Preenchimento da bandeira (ver +trajetoria/gerarTrajetoria) ---
+PREENCHER_BANDEIRA = false;    % true = preenche as formas (serpentina); false = só contorno (rápido p/ testar)
+PASSO_LEQUE        = 0.015;   % espaçamento entre passadas [m]. MENOR = mais resolução (mais lento); MAIOR = mais rápido/mais ralo
+LARGURA_FAIXA      = 0.05;    % largura da faixa branca preenchida [m]
+ESPESSURA_CAMADA   = 0.004;   % deslocamento em -X por camada de cor [m], p/ as cores de cima não sumirem atrás do verde
+
+NUM_CONTROLADORES = 1;   % 1 = só PD+gravidade (rápido); 2 = também torque computado (comparação p/ relatório)
+
 % --- Ferramenta (aplicador de tinta: 15 cm e 3 kg) ---
 COMPRIMENTO_TCP         = 0.15;             % flange até a ponta [m]
 MASSA_FERRAMENTA        = 3.0;              % [kg]
@@ -77,9 +85,12 @@ ferramenta = struct('comprimentoTcp', COMPRIMENTO_TCP, 'massa', MASSA_FERRAMENTA
 geometria = struct('centroBandeira', CENTRO_BANDEIRA, 'pontoEstacao', PONTO_ESTACAO, ...
     'larguraRetangulo', LARGURA_RETANGULO, 'alturaRetangulo', ALTURA_RETANGULO, ...
     'larguraLosango', LARGURA_LOSANGO, 'alturaLosango', ALTURA_LOSANGO, ...
-    'raioCirculo', RAIO_CIRCULO, 'centroArco', CENTRO_ARCO, 'raioArco', RAIO_ARCO);
+    'raioCirculo', RAIO_CIRCULO, 'centroArco', CENTRO_ARCO, 'raioArco', RAIO_ARCO, ...
+    'larguraFaixa', LARGURA_FAIXA);
 perfis = struct('dt', DT, 'velPintura', VEL_PINTURA, 'acelPintura', ACEL_PINTURA, ...
-    'velTransicao', VEL_TRANSICAO, 'acelTransicao', ACEL_TRANSICAO);
+    'velTransicao', VEL_TRANSICAO, 'acelTransicao', ACEL_TRANSICAO, ...
+    'preencher', PREENCHER_BANDEIRA, 'passoLeque', PASSO_LEQUE, ...
+    'espessuraCamada', ESPESSURA_CAMADA);
 codigosCor = struct('verde', COR_VERDE, 'transicao', COR_TRANSICAO, ...
     'amarelo', COR_AMARELO, 'azul', COR_AZUL, 'branco', COR_BRANCO);
 
@@ -129,20 +140,28 @@ end
 % robô, e não fixados arbitrariamente: juntas com pouca inércia (punho)
 % ficam instáveis com ganhos altos demais, enquanto juntas de base toleram
 % e precisam de ganhos maiores.
-fprintf('Simulando controle PD + compensação de gravidade (feedforward)...\n');
 M0 = massMatrix(robo, qTraj(:,1)');
 Kp = (WN^2) * diag(M0);
 Kd = (2*ZETA*WN) * diag(M0);
 
-[qSimPD, ~, tauSimPD] = controle.simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
-    Kp, Kd, WN, ZETA, LIMITE_TORQUE, 'pdGravidade');
-[qSimTC, ~, ~] = controle.simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
-    Kp, Kd, WN, ZETA, LIMITE_TORQUE, 'torqueComputado');
+% NUM_CONTROLADORES: 1 = só PD+gravidade (rápido); 2 = também torque computado.
+% A simulação roda na grade FINA (passo DT) — necessário para a estabilidade
+% numérica da integração em malha fechada.
+modos = {'pdGravidade', 'torqueComputado'};
+modos = modos(1:NUM_CONTROLADORES);
+qSim   = cell(1, numel(modos));
+tauSim = cell(1, numel(modos));
+for m = 1:numel(modos)
+    fprintf('Simulando controlador %d/%d (%s)...\n', m, numel(modos), modos{m});
+    [qSim{m}, ~, tauSim{m}] = controle.simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
+        Kp, Kd, WN, ZETA, LIMITE_TORQUE, modos{m});
+end
 
+% O 1º controlador (PD+gravidade) é a referência para a análise e os gráficos
+qSimPD   = qSim{1};
+tauSimPD = tauSim{1};
 controle.analisarControle(qTraj, qSimPD, tauTraj, tauSimPD, numJuntas);
-
 erroRmsPD = sqrt(mean((qTraj - qSimPD).^2, 2));
-erroRmsTC = sqrt(mean((qTraj - qSimTC).^2, 2));
 
 fprintf('\n--- RESULTADOS VALIDADOS ---\n');
 fprintf('Duração: %.2f s | pontos: %d\n', traj.tempo(end), numPassos);
@@ -150,7 +169,10 @@ fprintf('Erro IK máximo: %.3f mm | orientação: %.3e rad\n', 1e3*max(erroPosIK
 fprintf('Sigma mínimo do Jacobiano: %.3e\n', min(sigmaMin));
 fprintf('Torque máximo por junta [Nm]: %s\n', mat2str(torqueMaximo', 4));
 fprintf('RMS erro PD+G [rad]: %s\n', mat2str(erroRmsPD', 4));
-fprintf('RMS erro torque computado [rad]: %s\n', mat2str(erroRmsTC', 4));
+if numel(modos) >= 2
+    erroRmsTC = sqrt(mean((qTraj - qSim{2}).^2, 2));
+    fprintf('RMS erro torque computado [rad]: %s\n', mat2str(erroRmsTC', 4));
+end
 
 %% Animação e gráficos
 visualizacao.animarRobo(robo, qTraj, caminhoEfetuador, traj.cor, traj.tempo, ...

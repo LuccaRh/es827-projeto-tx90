@@ -1,7 +1,4 @@
-% Estima a área de trabalho do manipulador por amostragem de Monte Carlo do
-% espaço de juntas (dentro dos limites do URDF), verifica se os pontos
-% desejados da trajetória são alcançáveis (casco convexo da nuvem) e plota
-% a nuvem junto com a trajetória.
+% Faz a verificação da área de trabalho do robô, conferindo se os pontos desejados da trajetória estão dentro do alcance estimado
 function nuvem = verificarAreaTrabalho(robo, pontosDesejados, numAmostras)
     arguments
         robo (1,1) rigidBodyTree

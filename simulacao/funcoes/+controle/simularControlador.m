@@ -21,7 +21,9 @@ function [qSim, qdSim, tauSim] = simularControlador(robo, tempo, qTraj, qdTraj, 
     numJuntas = size(qTraj, 1);
     numPassos = numel(tempo);
     dt = tempo(2) - tempo(1);
-    numSubPassos = 2;
+    % Passo de integração interno limitado a ~0.02 s para estabilidade: se o dt
+    % da grade for grande, subdivide-se em mais subpassos (com DT=0.04 dá 2).
+    numSubPassos = max(2, ceil(dt / 0.02));
     hSub = dt / numSubPassos;
 
     qSim   = nan(numJuntas, numPassos);
