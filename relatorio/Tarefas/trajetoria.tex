@@ -561,4 +561,65 @@ e_R(t)=
 \right).
 \]
 
+\subsubsection{Preenchimento das formas em serpentina}
+
+Além do traçado dos contornos, foi implementada a opção de \emph{preenchimento}
+das regiões coloridas da bandeira, ativada pelo parâmetro
+\texttt{PREENCHER\_BANDEIRA}. O preenchimento reproduz a forma como uma pistola de
+pintura cobre uma superfície: por meio de passadas paralelas que varrem toda a
+área, técnica conhecida como varredura em serpentina (ou \textit{boustrophedon}).
+
+A região de cada forma é decomposta em uma sequência de faixas horizontais,
+espaçadas verticalmente por um passo $\Delta z$ (parâmetro \texttt{PASSO\_LEQUE}).
+Em cada faixa, o efetuador percorre a largura da forma de uma borda à outra,
+alternando o sentido a cada nível --- da esquerda para a direita em uma faixa e da
+direita para a esquerda na seguinte ---, de modo a cobrir toda a superfície sem
+deslocamentos desperdiçados. A meia-largura da forma em cada altura $z$, medida a
+partir do centro, é dada por uma função $\ell(z)$ específica de cada geometria:
+
+\[
+\ell_{\text{ret}}(z)=\frac{w_R}{2},
+\qquad
+\ell_{\text{los}}(z)=\frac{w_L}{2}\left(1-\frac{|z|}{h_L/2}\right),
+\qquad
+\ell_{\text{cir}}(z)=\sqrt{R_C^{\,2}-z^2},
+\]
+
+isto é, largura constante para o retângulo, decaimento linear para o losango e a
+semicorda para o círculo. Cada passada é então percorrida com o mesmo perfil
+temporal LSPB descrito anteriormente, o que faz a velocidade se anular nas viradas
+e concentra picos de torque nesses instantes.
+
+A faixa branca, por ser curva, não é preenchida por passadas retas, mas por
+\emph{arcos concêntricos}: o raio varia entre $R_{\text{arco}}\pm L_{\text{faixa}}/2$
+em passos de $\Delta z$, alternando-se o sentido angular a cada arco e ligando arcos
+vizinhos por um curto trecho radial. Como todas as formas estão no mesmo plano $X$,
+aplica-se ainda um pequeno deslocamento em profundidade a cada camada de cor
+(parâmetro \texttt{ESPESSURA\_CAMADA}), representando a espessura da tinta e evitando
+que cores sobrepostas conflitem na renderização.
+
+O preenchimento aumenta consideravelmente o número de pontos da trajetória --- de
+cerca de $1\,700$ no modo de contorno para vários milhares ---, porém não altera
+nenhuma etapa posterior: a cinemática inversa, a dinâmica e o controle consomem a
+mesma estrutura de trajetória, apenas com mais pontos a processar.
+
+A Figura~\ref{fig:preenchimento} mostra o resultado do preenchimento executado pelo
+manipulador: em (a) veem-se as passadas paralelas em serpentina cobrindo cada
+região, e em (b) a bandeira já concluída, com o losango, o círculo e a faixa branca
+preenchidos sobre o fundo verde.
+
+Vale ressaltar que os calculos em serpentina foram feitos como uma forma extra ao objetivo 
+principal do projeto, e feitos apenas para fins de demonstração e estudo de diferentes trajetórias.
+Portanto, na continuação do relatório, os resultados apresentados serão apenas para a trajetória de contorno da bandeira.
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Passadas em serpentina cobrindo as regiões da bandeira.]{%
+        \includegraphics[width=0.78\linewidth]{Imagens/bandeira_serpentina.png}}\\[4pt]
+    \subfloat[Bandeira preenchida ao final da execução.]{%
+        \includegraphics[width=0.78\linewidth]{Imagens/bandeira_preenchida.png}}
+    \caption{Preenchimento da bandeira por varredura em serpentina executado pelo TX90.}
+    \label{fig:preenchimento}
+\end{figure}
+
 Quanto menores forem esses valores, maior será a proximidade entre a trajetória cartesiana desejada e a trajetória realizada pelo manipulador, aumentando a qualidade do nosso controle e permitindo uma movimentação mais equilibrada e fluída.

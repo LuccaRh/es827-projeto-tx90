@@ -1,2 +1,20 @@
 \newpage
 \section{Resumo}
+
+Este trabalho apresenta a simulação de um manipulador industrial Stäubli TX90, de
+seis graus de liberdade, executando a pintura da bandeira do Brasil, como aplicação
+integrada das técnicas de robótica estudadas na disciplina. A partir da definição
+geométrica das formas da bandeira, gerou-se a trajetória cartesiana do efetuador com
+perfil de velocidade LSPB --- no modo de traçado dos contornos ou de preenchimento
+por varredura em serpentina ---, intercalada com deslocamentos livres a uma estação
+de troca de cores. Cada ponto da trajetória foi convertido para o espaço articular
+por cinemática inversa, validada por cinemática direta e pela análise do menor valor
+singular do Jacobiano, que mede a proximidade de singularidades. Em seguida, a
+dinâmica inversa forneceu os torques exigidos, confrontados com os limites do
+manipulador, e simularam-se dois controladores em malha fechada: PD com compensação
+de gravidade e torque computado. Os resultados confirmam a viabilidade da tarefa:
+todas as poses admitem solução de cinemática inversa longe de singularidades, os
+limites de velocidade e de torque são respeitados e ambos os controladores
+acompanham a referência com erros reduzidos, com desempenho superior do torque
+computado. Por fim, discutem-se as limitações do modelo e os passos necessários para
+uma eventual implementação física.

@@ -20,15 +20,15 @@ addpath(fullfile(scriptDir, "funcoes"));
 
 %% Parâmetros
 % --- Amostragem e limites cartesianos da trajetória ---
-DT             = 0.04;   % passo de amostragem [s]
+DT             = 0.03;   % passo de amostragem [s]
 VEL_PINTURA    = 0.12;   % velocidade máxima com spray ligado [m/s]
 ACEL_PINTURA   = 0.30;   % aceleração máxima com spray ligado [m/s^2]
 VEL_TRANSICAO  = 0.35;   % velocidade máxima em movimento livre [m/s]
 ACEL_TRANSICAO = 0.60;   % aceleração máxima em movimento livre [m/s^2]
 
 % --- Preenchimento da bandeira (ver +trajetoria/gerarTrajetoria) ---
-PREENCHER_BANDEIRA = false;    % true = preenche as formas (serpentina); false = só contorno (rápido p/ testar)
-PASSO_LEQUE        = 0.015;   % espaçamento entre passadas [m]. MENOR = mais resolução (mais lento); MAIOR = mais rápido/mais ralo
+PREENCHER_BANDEIRA = true;    % true = preenche as formas (serpentina); false = só contorno (rápido p/ testar)
+PASSO_LEQUE        = 0.005;   % espaçamento entre passadas [m]. MENOR = mais resolução (mais lento); MAIOR = mais rápido/mais ralo
 LARGURA_FAIXA      = 0.05;    % largura da faixa branca preenchida [m]
 ESPESSURA_CAMADA   = 0.004;   % deslocamento em -X por camada de cor [m], p/ as cores de cima não sumirem atrás do verde
 

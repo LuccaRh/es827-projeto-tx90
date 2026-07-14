@@ -149,7 +149,9 @@ O controle por torque computado apresentou o melhor rastreamento, pois utiliza u
 
 \subsection{Dificuldades encontradas}
 
- Alguns pontos que podem ser discutidos são a obtenção do modelo do robô, a definição dos referenciais, a solução da cinemática inversa, a geração da trajetória, o cálculo dos torques e a sintonia dos controladores.
+Algumas das dificuldades que encontramos foram a obtenção do modelo do robô, para a qual foi necessário um esforço de pesquisa além do esperado até que fosse possível encontrá-lo. Outro ponto que se apresentou confuso no início foi a definição da trajetória: essa questão tomou algum tempo e algumas idas e vindas até que fosse possível montar a sequência de pontos que ficou como decisão final.
+
+Outro grande ponto de dificuldade foi a validação reversa de todos os cálculos de cinemática direta e inversa. Uma vez que o grupo tomou a decisão de fazer essa verificação, um bom tempo e esforço dos membros foi dedicado a comprová-los manualmente. Ademais, a geração dos referenciais de torque e sua aplicação exigiu algumas tentativas até funcionar corretamente.
 
 \subsection{Limitações e próximos passos}
 
@@ -170,23 +172,32 @@ Após o período de maior demanda relacionado à Copa, a mesma linha poderia ser
 \begin{tabularx}{\textwidth}{|p{5.0cm}|X|}
 \hline
 \textbf{Integrante} & \textbf{Contribuição} \\ \hline
-Gabriel Erick Matheus Imamura & Revisão bibliográfica, contextualização da aplicação, pesquisa e comparação de manipuladores e organização das fontes. \\ \hline
-Matheus Gasques Siqueira & A confirmar pela equipe antes da entrega. \\ \hline
-Gabriel Zanette Cipriano & A confirmar pela equipe antes da entrega. \\ \hline
-Lucca Ewertom Ryuichi Hirakawa & A confirmar pela equipe antes da entrega. \\ \hline
-João Victor Pomiglio de Oliveira & A confirmar pela equipe antes da entrega. \\ \hline
+Gabriel Erick Matheus Imamura & Definição do modelo esquemático do braço robótico, da matriz DH e da cinemática direta e inversa, e parte da descrição da trajetória no relatório. \\ \hline
+Matheus Gasques Siqueira & Definição dos pontos das trajetórias e parte da simulação. \\ \hline
+Gabriel Zanette Cipriano & Revisão bibliográfica, contextualização da aplicação, pesquisa, introdução, conversão da trajetória, parte da simulação e resultados dinâmicos. \\ \hline
+Lucca Ewertom Ryuichi Hirakawa & Revisão e organização do código e do relatório, e a parte de serpentina da trajetória. \\ \hline
+João Victor Pomiglio de Oliveira & Definição do software de simulação, importação do modelo 3D, implementação da simulação, lógica de movimento suave e geração dos dados do modelo cinemáticos e dinâmicos. \\ \hline
 \end{tabularx}
 \end{table}
 
-\subsection{Código MATLAB utilizado}
+\subsection{Código MATLAB}
 
-O código completo utilizado para gerar a trajetória, calcular a cinemática inversa, avaliar a dinâmica e simular os controladores é apresentado a seguir. Ele foi organizado em múltiplos arquivos, com uma função pública por arquivo, conforme a convenção do MATLAB: o script principal define todos os parâmetros do projeto e orquestra as etapas, e cada etapa é implementada em uma função própria.
-
+O código para gerar a trajetória, calcular a cinemática inversa, avaliar a dinâmica e simular os controladores é apresentado a seguir. 
+Ele foi organizado em múltiplas pastas, com seus respectivos arquivos em cada uma. Elas foram feitas seguindo a convenção do MATLAB, em que o script principal define todos os parâmetros do projeto e orquestra as etapas, 
+e cada etapa é implementada em uma função própria, sendo importada das pastas, que são usadas como bibliotecas. 
+As funções foram agrupadas em quatro pacotes: \texttt{+robotica}, \texttt{+trajetoria}, \texttt{+controle} e \texttt{+visualizacao}, todos dentro da pasta funcoes.
+O código em si foi feito seguindo as boas práticas do MATLAB, com comentários, nomes de variáveis e funções descritivos e em camelCase, e modularização das etapas.
 \begingroup
 \singlespacing
 \lstinputlisting[caption={Script principal da simulação (simulacaoTX90.m).},label={lst:simulacaoTX90}]{\dirSimulacao/simulacaoTX90.m}
 \lstinputlisting[caption={Carregamento do robô e da ferramenta (+robotica/carregarRobo.m).},label={lst:carregarRobo}]{\dirSimulacao/funcoes/+robotica/carregarRobo.m}
-\lstinputlisting[caption={Geração da trajetória cartesiana com perfil LSPB (+trajetoria/gerarTrajetoria.m).},label={lst:gerarTrajetoria}]{\dirSimulacao/funcoes/+trajetoria/gerarTrajetoria.m}
+\lstinputlisting[caption={Geração da trajetória cartesiana com perfil LSPB, orquestrando contorno ou preenchimento (+trajetoria/gerarTrajetoria.m).},label={lst:gerarTrajetoria}]{\dirSimulacao/funcoes/+trajetoria/gerarTrajetoria.m}
+\lstinputlisting[caption={Perfil temporal LSPB (+trajetoria/private/perfilLSPB.m).},label={lst:perfilLSPB}]{\dirSimulacao/funcoes/+trajetoria/private/perfilLSPB.m}
+\lstinputlisting[caption={Interpolação LSPB entre waypoints em linha reta (+trajetoria/private/interpolarCartesianaConstante.m).},label={lst:interpolarCartesianaConstante}]{\dirSimulacao/funcoes/+trajetoria/private/interpolarCartesianaConstante.m}
+\lstinputlisting[caption={Interpolação LSPB entre dois pontos, para os deslocamentos livres (+trajetoria/private/interpolarTransicao.m).},label={lst:interpolarTransicao}]{\dirSimulacao/funcoes/+trajetoria/private/interpolarTransicao.m}
+\lstinputlisting[caption={Interpolação LSPB ao longo de um arco de círculo (+trajetoria/private/interpolarArco.m).},label={lst:interpolarArco}]{\dirSimulacao/funcoes/+trajetoria/private/interpolarArco.m}
+\lstinputlisting[caption={Geração dos waypoints de preenchimento em serpentina (+trajetoria/private/rasterizarForma.m).},label={lst:rasterizarForma}]{\dirSimulacao/funcoes/+trajetoria/private/rasterizarForma.m}
+\lstinputlisting[caption={Preenchimento da faixa branca por arcos concêntricos (+trajetoria/private/preencherFaixa.m).},label={lst:preencherFaixa}]{\dirSimulacao/funcoes/+trajetoria/private/preencherFaixa.m}
 \lstinputlisting[caption={Cinemática inversa com validação por cinemática direta (+robotica/resolverCinematicaInversa.m).},label={lst:resolverCinematicaInversa}]{\dirSimulacao/funcoes/+robotica/resolverCinematicaInversa.m}
 \lstinputlisting[caption={Dinâmica inversa e análise dos torques (+robotica/calcularTorques.m).},label={lst:calcularTorques}]{\dirSimulacao/funcoes/+robotica/calcularTorques.m}
 \lstinputlisting[caption={Controladores em malha fechada (+controle/simularControlador.m).},label={lst:simularControlador}]{\dirSimulacao/funcoes/+controle/simularControlador.m}
