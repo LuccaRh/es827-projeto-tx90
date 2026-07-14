@@ -11,6 +11,13 @@
 %  Executar a partir da pasta simulacao/ (o URDF é carregado por caminho relativo).
 clearvars; close all; clc;
 
+%% Imports
+
+% Pega o caminho do script atual e adiciona a pasta "funcoes" ao path do MATLAB
+scriptDir = fileparts(mfilename('fullpath'));
+% Adiciona a pasta "funcoes" ao path do MATLAB para que as funções auxiliares possam ser chamadas
+addpath(fullfile(scriptDir, "funcoes"));
+
 %% Parâmetros
 % --- Amostragem e limites cartesianos da trajetória ---
 DT             = 0.04;   % passo de amostragem [s]
@@ -64,7 +71,7 @@ CORES_RASTRO = [ ...
 %% Modelo do robô e da ferramenta
 ferramenta = struct('comprimentoTcp', COMPRIMENTO_TCP, 'massa', MASSA_FERRAMENTA, ...
     'centroMassa', CENTRO_MASSA_FERRAMENTA, 'inercia', INERCIA_FERRAMENTA);
-[robo, numJuntas] = carregarRobo('tx90.urdf', ferramenta);
+[robo, numJuntas] = robotica.carregarRobo('tx90.urdf', ferramenta);
 
 %% Trajetória cartesiana
 geometria = struct('centroBandeira', CENTRO_BANDEIRA, 'pontoEstacao', PONTO_ESTACAO, ...
@@ -76,7 +83,7 @@ perfis = struct('dt', DT, 'velPintura', VEL_PINTURA, 'acelPintura', ACEL_PINTURA
 codigosCor = struct('verde', COR_VERDE, 'transicao', COR_TRANSICAO, ...
     'amarelo', COR_AMARELO, 'azul', COR_AZUL, 'branco', COR_BRANCO);
 
-traj = gerarTrajetoria(geometria, perfis, codigosCor);
+traj = trajetoria.gerarTrajetoria(geometria, perfis, codigosCor);
 numPassos = numel(traj.tempo);
 
 fprintf('Trajetória: %d pontos, duração %.2f s.\n', numPassos, traj.tempo(end));
@@ -85,12 +92,12 @@ fprintf('Aceleração cartesiana comandada máxima: %.4f m/s^2.\n', max(abs(traj
 
 %% Verificação da área de trabalho (workspace)
 fprintf('Verificando área de trabalho do manipulador...\n');
-verificarAreaTrabalho(robo, traj.pontosDesejados, NUM_AMOSTRAS_WORKSPACE);
+areaTrabalho.verificarAreaTrabalho(robo, traj.pontosDesejados, NUM_AMOSTRAS_WORKSPACE);
 
 %% Cinemática inversa e perfis articulares
 fprintf('Calculando cinemática inversa. Aguarde...\n');
 [qTraj, caminhoEfetuador, erroPosIK, erroOriIK, sigmaMin] = ...
-    resolverCinematicaInversa(robo, traj.posCart, R_FERRAMENTA, PESOS_IK);
+    robotica.resolverCinematicaInversa(robo, traj.posCart, R_FERRAMENTA, PESOS_IK);
 
 if max(erroPosIK) > TOL_POSICAO_IK || max(erroOriIK) > TOL_ORIENTACAO_IK
     error('A cinemática inversa não atingiu a tolerância esperada.');
@@ -110,7 +117,7 @@ end
 
 %% Dinâmica: cálculo dos torques necessários (a partir do URDF)
 fprintf('Calculando torques via dinâmica inversa (modelo URDF)...\n');
-tauTraj = calcularTorques(robo, qTraj, qdTraj, qddTraj, traj.tempo);
+tauTraj = robotica.calcularTorques(robo, qTraj, qdTraj, qddTraj, traj.tempo);
 
 torqueMaximo = max(abs(tauTraj), [], 2);
 if any(torqueMaximo > LIMITE_TORQUE)
@@ -127,12 +134,12 @@ M0 = massMatrix(robo, qTraj(:,1)');
 Kp = (WN^2) * diag(M0);
 Kd = (2*ZETA*WN) * diag(M0);
 
-[qSimPD, ~, tauSimPD] = simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
+[qSimPD, ~, tauSimPD] = controle.simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
     Kp, Kd, WN, ZETA, LIMITE_TORQUE, 'pdGravidade');
-[qSimTC, ~, ~] = simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
+[qSimTC, ~, ~] = controle.simularControlador(robo, traj.tempo, qTraj, qdTraj, qddTraj, ...
     Kp, Kd, WN, ZETA, LIMITE_TORQUE, 'torqueComputado');
 
-analisarControle(qTraj, qSimPD, tauTraj, tauSimPD, numJuntas);
+controle.analisarControle(qTraj, qSimPD, tauTraj, tauSimPD, numJuntas);
 
 erroRmsPD = sqrt(mean((qTraj - qSimPD).^2, 2));
 erroRmsTC = sqrt(mean((qTraj - qSimTC).^2, 2));
@@ -146,7 +153,7 @@ fprintf('RMS erro PD+G [rad]: %s\n', mat2str(erroRmsPD', 4));
 fprintf('RMS erro torque computado [rad]: %s\n', mat2str(erroRmsTC', 4));
 
 %% Animação e gráficos
-animarRobo(robo, qTraj, caminhoEfetuador, traj.cor, traj.tempo, ...
+visualizacao.animarRobo(robo, qTraj, caminhoEfetuador, traj.cor, traj.tempo, ...
     CORES_RASTRO, COR_TRANSICAO, PONTO_ESTACAO);
 
-plotarResultados(traj.tempo, qTraj, qdTraj, qddTraj, tauTraj, qSimPD, tauSimPD, numJuntas);
+visualizacao.plotarResultados(traj.tempo, qTraj, qdTraj, qddTraj, tauTraj, qSimPD, tauSimPD, numJuntas);

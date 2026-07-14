@@ -21,12 +21,12 @@ end
 function plotarPerfisJuntas(tempo, qTraj, qdTraj, qddTraj, numJuntas)
     mapaCores = lines(numJuntas);
     nomesJuntas = {'J1', 'J2', 'J3', 'J4', 'J5', 'J6'};
-    figPerfis = criarFiguraEscura('TX90 – Perfis de Junta');
+    figPerfis = visualizacao.criarFiguraEscura('TX90 – Perfis de Junta');
     dados   = {qTraj, qdTraj, qddTraj};
     titulos = {'Posição (rad)', 'Velocidade (rad/s)', 'Aceleração (rad/s²)'};
 
     for grafico = 1:3
-        eixoSub = estilizarEixoEscuro(subplot(3, 1, grafico, 'Parent', figPerfis));
+        eixoSub = visualizacao.estilizarEixoEscuro(subplot(3, 1, grafico, 'Parent', figPerfis));
         for junta = 1:numJuntas
             plot(eixoSub, tempo, dados{grafico}(junta,:), 'LineWidth', 1.8, ...
                 'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -46,8 +46,8 @@ function plotarTorques(tempo, tauTraj, numJuntas)
     mapaCores = lines(numJuntas);
     nomesJuntas = {'J1', 'J2', 'J3', 'J4', 'J5', 'J6'};
 
-    figTorques = criarFiguraEscura('TX90 – Torques (Dinâmica Inversa)');
-    eixo = estilizarEixoEscuro(axes('Parent', figTorques));
+    figTorques = visualizacao.criarFiguraEscura('TX90 – Torques (Dinâmica Inversa)');
+    eixo = visualizacao.estilizarEixoEscuro(axes('Parent', figTorques));
     for junta = 1:numJuntas
         plot(eixo, tempo, tauTraj(junta,:), 'LineWidth', 1.8, ...
             'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -66,10 +66,10 @@ function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
     nomesJuntas = {'J1', 'J2', 'J3', 'J4', 'J5', 'J6'};
     erro = qTraj - qSim;
 
-    figControle = criarFiguraEscura('TX90 – Controle PD + Compensação de Gravidade');
+    figControle = visualizacao.criarFiguraEscura('TX90 – Controle PD + Compensação de Gravidade');
 
     % Subplot 1: erro de rastreamento por junta
-    eixoErro = estilizarEixoEscuro(subplot(3, 1, 1, 'Parent', figControle));
+    eixoErro = visualizacao.estilizarEixoEscuro(subplot(3, 1, 1, 'Parent', figControle));
     for junta = 1:numJuntas
         plot(eixoErro, tempo, erro(junta,:), 'LineWidth', 1.6, ...
             'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -80,7 +80,7 @@ function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
         'Color', [0.12 0.12 0.18], 'EdgeColor', [0.30 0.30 0.40]);
 
     % Subplot 2: torque aplicado pelo controlador (PD + gravidade)
-    eixoTorque = estilizarEixoEscuro(subplot(3, 1, 2, 'Parent', figControle));
+    eixoTorque = visualizacao.estilizarEixoEscuro(subplot(3, 1, 2, 'Parent', figControle));
     for junta = 1:numJuntas
         plot(eixoTorque, tempo, tauSim(junta,:), 'LineWidth', 1.6, ...
             'Color', mapaCores(junta,:), 'DisplayName', nomesJuntas{junta});
@@ -91,7 +91,7 @@ function plotarControle(tempo, qTraj, qSim, tauTraj, tauSim, numJuntas)
         'Color', [0.12 0.12 0.18], 'EdgeColor', [0.30 0.30 0.40]);
 
     % Subplot 3: diferença entre torque ideal (dinâmica inversa) e o do controlador
-    eixoDif = estilizarEixoEscuro(subplot(3, 1, 3, 'Parent', figControle));
+    eixoDif = visualizacao.estilizarEixoEscuro(subplot(3, 1, 3, 'Parent', figControle));
     difTorque = tauTraj - tauSim;
     for junta = 1:numJuntas
         plot(eixoDif, tempo, difTorque(junta,:), 'LineWidth', 1.6, ...

@@ -81,8 +81,8 @@ end
 
 % Plota a nuvem de pontos da área de trabalho junto com a trajetória desejada
 function plotarAreaTrabalho(nuvem, pontosDesejados)
-    figWorkspace = criarFiguraEscura('TX90 – Área de Trabalho (Workspace)');
-    eixo = estilizarEixoEscuro(axes('Parent', figWorkspace));
+    figWorkspace = visualizacao.criarFiguraEscura('TX90 – Área de Trabalho (Workspace)');
+    eixo = visualizacao.estilizarEixoEscuro(axes('Parent', figWorkspace));
     view(eixo, 140, 22); axis(eixo, 'equal');
 
     scatter3(eixo, nuvem(1,:), nuvem(2,:), nuvem(3,:), 4, ...
